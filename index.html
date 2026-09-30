@@ -1,0 +1,1989 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio de Texturas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* Layout: banco de trabajo de tres columnas. Simulaciones a la izquierda, lienzo al centro, acabado y exportación a la derecha. */
+:root{
+  --bg:#f1efea; --panel:#e8e5de; --line:#cfcac0; --fg:#1d1f21; --mute:#65696e;
+  --accent:#b4581f; --accent-fg:#ffffff; --field:#f8f6f1; --stage:#dcd8cf;
+  --display:'Syne','Arial Black',sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1214; --panel:#161a1d; --line:#272d32; --fg:#e8e4da; --mute:#8b939a;
+    --accent:#e0914f; --accent-fg:#160c04; --field:#1d2226; --stage:#0a0c0e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1214; --panel:#161a1d; --line:#272d32; --fg:#e8e4da; --mute:#8b939a;
+  --accent:#e0914f; --accent-fg:#160c04; --field:#1d2226; --stage:#0a0c0e; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--body);display:flex;flex-direction:column}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:baseline;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top h1{margin:0;font:800 20px/1 var(--display);letter-spacing:.01em;text-wrap:balance}
+.top .brand{font:500 12px var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.12em}
+.top .status{margin-left:auto;font:400 12px var(--mono);color:var(--mute);min-width:0}
+
+.app{flex:1;min-height:0;display:grid;grid-template-columns:300px minmax(0,1fr) 290px}
+.panel{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:22px;background:var(--panel)}
+.panel.left{border-right:1px solid var(--line)}
+.panel.right{border-left:1px solid var(--line)}
+.panel h2{margin:0 0 10px;font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.14em;color:var(--mute)}
+.group{display:flex;flex-direction:column;gap:10px;min-width:0}
+
+.sims{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sim-btn{padding:8px 10px;text-align:left;background:var(--field);border:1px solid var(--line);border-radius:4px;cursor:pointer;line-height:1.25;min-width:0}
+.sim-btn small{display:block;font:400 10px var(--mono);color:var(--mute);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.sim-btn:hover{border-color:var(--mute)}
+.sim-btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-fg)}
+.sim-btn[aria-pressed="true"] small{color:inherit;opacity:.8}
+.desc{margin:0;color:var(--mute);font-size:13px;text-wrap:pretty}
+
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.ctl label{font-size:13px}
+.ctl output{font:400 12px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0;height:20px}
+select,input[type=number]{width:100%;padding:6px 8px;background:var(--field);border:1px solid var(--line);border-radius:4px}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.btn{padding:8px 12px;background:var(--field);border:1px solid var(--line);border-radius:4px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--mute)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.rec{border-color:#c0392b;color:#e5604f}
+.btn[disabled]{opacity:.5;cursor:wait}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.swatches input{width:100%;height:34px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--field);cursor:pointer}
+.ramp{height:14px;border-radius:3px;border:1px solid var(--line)}
+
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0;padding:16px;gap:12px;background:var(--stage)}
+.view{flex:1;min-height:0;display:grid;grid-template:minmax(0,1fr)/minmax(0,1fr);place-items:center}
+#dc{max-width:100%;max-height:100%;display:block;box-shadow:0 0 0 1px var(--line);
+  background:repeating-conic-gradient(#8884 0 25%,#0000 0 50%) 0 0/16px 16px}
+#dc{cursor:grab;touch-action:none}
+#dc:active{cursor:grabbing}
+.zoomctl{display:flex;gap:4px}
+.zoomctl .btn{min-width:38px;padding:8px 10px;font-variant-numeric:tabular-nums}
+.modal{position:fixed;inset:0;z-index:10;background:#000d;display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.modal .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;max-width:min(94vw,720px);max-height:94vh;display:flex;flex-direction:column;gap:10px}
+.modal img{max-width:100%;max-height:68vh;object-fit:contain;background:repeating-conic-gradient(#8884 0 25%,#0000 0 50%) 0 0/16px 16px;-webkit-touch-callout:default;user-select:auto}
+.modal .btnrow{justify-content:flex-end}
+.modal p{margin:0;font-size:13px;color:var(--mute)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar .spd{display:flex;align-items:center;gap:8px;flex:1 1 160px;min-width:140px}
+.bar .spd label{font:400 12px var(--mono);color:var(--mute)}
+.bar .stats{font:400 12px var(--mono);color:var(--mute);margin-left:auto;font-variant-numeric:tabular-nums}
+.seed{display:flex;gap:6px;align-items:center}
+.seed input{width:96px}
+.hint{font:400 11px var(--mono);color:var(--mute)}
+
+@media (max-width:1000px){
+  html,body{height:auto}
+  .app{display:flex;flex-direction:column}
+  .stage{order:-1;padding:12px 16px}
+  .view{flex:none}
+  #dc{max-height:75vh}
+  .panel.left,.panel.right{border:0;border-top:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Laboratorio de Texturas</h1>
+  <span class="brand">El Físico Barbudo</span>
+  <span class="status" id="status" role="status"></span>
+</header>
+
+<main class="app">
+  <aside class="panel left" aria-label="Simulación">
+    <div class="group">
+      <h2>Simulación</h2>
+      <div class="sims" id="simlist"></div>
+      <p class="desc" id="simdesc"></p>
+    </div>
+    <div class="group">
+      <h2>Parámetros</h2>
+      <div class="group" id="params"></div>
+    </div>
+  </aside>
+
+  <section class="stage" aria-label="Lienzo">
+    <div class="view"><canvas id="dc" width="1000" height="1000"></canvas></div>
+    <div class="bar">
+      <button class="btn" id="playBtn" type="button">Pausar</button>
+      <button class="btn" id="stepBtn" type="button">Paso</button>
+      <button class="btn" id="resetBtn" type="button">Reiniciar</button>
+      <div class="spd"><label for="speed">Velocidad</label><input type="range" id="speed" min="0" max="6" step="1" value="3"></div>
+      <div class="seed"><label class="hint" for="seed">semilla</label><input type="number" id="seed" value="7" min="0" max="999999"><button class="btn" id="diceBtn" type="button" title="Semilla nueva">Nueva</button></div>
+      <div class="zoomctl">
+        <button class="btn" id="zoomOut" type="button" aria-label="Alejar">−</button>
+        <button class="btn" id="zoomReset" type="button" title="Centrar cámara"><span id="zoomVal">100%</span></button>
+        <button class="btn" id="zoomIn" type="button" aria-label="Acercar">+</button>
+      </div>
+      <span class="stats" id="stats"></span>
+    </div>
+  </section>
+
+  <aside class="panel right" aria-label="Acabado y exportación">
+    <div class="group">
+      <h2>Formato</h2>
+      <div class="ctl"><label for="aspect">Proporción</label>
+        <select id="aspect">
+          <option value="1:1">1:1 cuadrado</option>
+          <option value="4:5">4:5 post vertical</option>
+          <option value="9:16">9:16 story / reel</option>
+          <option value="16:9">16:9 miniatura / vídeo</option>
+          <option value="3:1">3:1 banner</option>
+          <option value="1:3">1:3 marcapáginas</option>
+        </select></div>
+      <div class="ctl"><div class="row"><label for="res">Resolución de cuadrícula</label><output id="resOut"></output></div>
+        <input type="range" id="res" min="64" max="1024" step="32" value="256"></div>
+    </div>
+
+    <div class="group">
+      <h2>Color</h2>
+      <div class="ctl"><label for="palette">Paleta</label><select id="palette"></select></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="ramp" id="ramp"></div>
+      <div class="ctl"><div class="row"><label for="levels">Niveles de color</label><output id="levelsOut"></output></div>
+        <input type="range" id="levels" min="2" max="64" step="1" value="64"></div>
+      <label class="check"><input type="checkbox" id="invert">Invertir degradado</label>
+      <label class="check"><input type="checkbox" id="transp">Fondo transparente (índice 0)</label>
+      <div class="btnrow"><button class="btn" id="randPal" type="button">Paleta aleatoria</button></div>
+    </div>
+
+    <div class="group">
+      <h2>Acabado</h2>
+      <label class="check"><input type="checkbox" id="smooth">Suavizar al ampliar</label>
+      <div class="ctl"><div class="row"><label for="grain">Grano</label><output id="grainOut"></output></div>
+        <input type="range" id="grain" min="0" max="100" step="1" value="0"></div>
+      <div class="ctl"><div class="row"><label for="grainSize">Tamaño de grano</label><output id="grainSizeOut"></output></div>
+        <input type="range" id="grainSize" min="1" max="4" step="1" value="1"></div>
+      <span class="hint">Arrastra el lienzo para mover la cámara y usa la rueda (o pellizca) para acercar.</span>
+      <span class="hint">En las simulaciones periódicas, alejar la cámara muestra el mosaico enlazado sin costuras.</span>
+    </div>
+
+    <div class="group">
+      <h2>Exportar</h2>
+      <div class="ctl"><label for="expSize">Lado largo</label>
+        <select id="expSize">
+          <option value="1080">1080 px</option>
+          <option value="2048">2048 px</option>
+          <option value="3000" selected>3000 px</option>
+          <option value="4096">4096 px</option>
+        </select></div>
+      <div class="btnrow">
+        <button class="btn primary" id="pngBtn" type="button">Descargar PNG</button>
+        <button class="btn" id="recBtn" type="button">Grabar WebM</button>
+      </div>
+      <span class="hint" id="expHint"></span>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden role="dialog" aria-label="Textura exportada">
+  <div class="card">
+    <img id="shotImg" alt="Textura exportada">
+    <p>Pulsa Compartir y elige Drive, Fotos u otra app. Si no aparece, mantén pulsada la imagen y elige Guardar.</p>
+    <div class="btnrow">
+      <button class="btn primary" id="shotShare" type="button" hidden>Compartir o guardar</button>
+      <a class="btn" id="shotDl" href="#" download="textura.png">Descargar</a>
+      <button class="btn" id="modalClose" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* ---------- Aleatoriedad con semilla (mulberry32) ---------- */
+let rs = 1;
+function rnd(){
+  rs = (rs + 0x6D2B79F5) | 0;
+  let t = Math.imul(rs ^ (rs >>> 15), 1 | rs);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+/* ---------- Simulaciones ---------- */
+/* Cada simulación produce un índice 0..255 por celda. La paleta convierte el índice en color.
+   kind 'dynamic': create(W,H,p) devuelve {step(), idx, stats?()}.
+   kind 'static' : render(W,H,p) devuelve un Uint8Array W*H (se puede recalcular a cualquier tamaño para exportar). */
+
+const SIMS = [];
+
+/* 1. Ising */
+SIMS.push({
+  id:'ising', name:'Modelo de Ising', tag:'dinámico',
+  desc:'Espines ±1 que prefieren alinearse con sus vecinos, con dinámica de Metropolis. Cerca de T ≈ 2,27 aparecen dominios en todas las escalas.',
+  params:[
+    {k:'T', label:'Temperatura', min:0.5, max:5, step:0.01, v:2.27},
+    {k:'B', label:'Campo externo', min:-1, max:1, step:0.01, v:0},
+    {k:'trail', label:'Memoria (estela)', min:0, max:0.98, step:0.01, v:0.6},
+    {k:'sweeps', label:'Barridos por paso', min:1, max:10, step:1, v:1},
+    {k:'init', label:'Estado inicial', type:'select', restart:true, v:'rand',
+      options:[['rand','Aleatorio'],['up','Todo alineado'],['stripes','Bandas']]},
+  ],
+  presets:[
+    {name:'Punto crítico', values:{T:2.27,B:0,trail:0.6}},
+    {name:'Frío: dominios grandes', values:{T:1.6,B:0,trail:0.3}},
+    {name:'Caliente: ruido', values:{T:4.5,B:0,trail:0.85}},
+    {name:'Campo que gana', values:{T:2.4,B:0.15,trail:0.5}},
+  ],
+  create(W,H,p){
+    const N=W*H, s=new Int8Array(N), v=new Float32Array(N), idx=new Uint8Array(N);
+    for(let i=0;i<N;i++){
+      const x=i%W;
+      s[i] = p.init==='up' ? 1 : p.init==='stripes' ? (((x/(W/8))|0)%2?1:-1) : (rnd()<0.5?1:-1);
+      v[i] = s[i]>0?1:0; idx[i]=v[i]*255;
+    }
+    return {
+      idx,
+      step(){
+        const T=p.T, B=p.B, tr=p.trail;
+        for(let sw=0;sw<p.sweeps;sw++){
+          for(let n=0;n<N;n++){
+            const i=(rnd()*N)|0, x=i%W, y=(i-x)/W;
+            const nb = s[y*W+(x+1)%W]+s[y*W+(x+W-1)%W]+s[((y+1)%H)*W+x]+s[((y+H-1)%H)*W+x];
+            const dE = 2*s[i]*(nb+B);
+            if(dE<=0 || rnd()<Math.exp(-dE/T)) s[i]=-s[i];
+          }
+        }
+        for(let i=0;i<N;i++){ v[i]=v[i]*tr+(s[i]>0?1:0)*(1-tr); idx[i]=v[i]*255; }
+      },
+      stats(){ let m=0; for(let i=0;i<N;i++) m+=s[i]; return 'magnetización '+(m/N).toFixed(3); }
+    };
+  }
+});
+
+/* 2. Schelling */
+SIMS.push({
+  id:'schelling', name:'Segregación de Schelling', tag:'dinámico',
+  desc:'Agentes de varios grupos que se mudan si muy pocos vecinos son de los suyos. Una preferencia leve produce barrios muy segregados.',
+  params:[
+    {k:'tol', label:'Tolerancia (mínimo de iguales)', min:0.05, max:0.9, step:0.01, v:0.4},
+    {k:'dens', label:'Ocupación', min:0.5, max:0.98, step:0.01, v:0.9, restart:true},
+    {k:'groups', label:'Grupos', min:2, max:5, step:1, v:3, restart:true},
+  ],
+  presets:[
+    {name:'Barrios suaves', values:{tol:0.3,dens:0.92,groups:2}},
+    {name:'Tres tribus', values:{tol:0.42,dens:0.9,groups:3}},
+    {name:'Muy segregado', values:{tol:0.62,dens:0.85,groups:2}},
+    {name:'Mosaico de cinco', values:{tol:0.45,dens:0.93,groups:5}},
+  ],
+  create(W,H,p){
+    const N=W*H, g=new Uint8Array(N), idx=new Uint8Array(N), empt=new Int32Array(N), n=p.groups;
+    let ec=0;
+    for(let i=0;i<N;i++){ if(rnd()<p.dens) g[i]=1+((rnd()*n)|0); else empt[ec++]=i; }
+    const lut=[0]; for(let k=1;k<=n;k++) lut.push(Math.round(255*k/n));
+    function unhappy(i){
+      const x=i%W, y=(i-x)/W; let same=0, occ=0;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+        if(!dx && !dy) continue;
+        const c=g[((y+dy+H)%H)*W+(x+dx+W)%W];
+        if(c){ occ++; if(c===g[i]) same++; }
+      }
+      return occ>0 && same/occ<p.tol;
+    }
+    function paint(){ for(let i=0;i<N;i++) idx[i]=lut[g[i]]; }
+    paint();
+    return {
+      idx,
+      step(){
+        for(let t=0;t<N;t++){
+          const i=(rnd()*N)|0;
+          if(g[i] && ec>0 && unhappy(i)){
+            const e=(rnd()*ec)|0, j=empt[e];
+            g[j]=g[i]; g[i]=0; empt[e]=i;
+          }
+        }
+        paint();
+      },
+      stats(){ let u=0,a=0; for(let i=0;i<N;i++) if(g[i]){ a++; if(unhappy(i)) u++; } return 'insatisfechos '+(100*u/Math.max(1,a)).toFixed(1)+'%'; }
+    };
+  }
+});
+
+/* 3. Gray-Scott */
+SIMS.push({
+  id:'grayscott', name:'Reacción-difusión', tag:'dinámico',
+  desc:'Modelo de Gray-Scott: dos químicos que reaccionan y se difunden. Según alimentación (F) y retirada (k) salen manchas, corales, laberintos o gusanos.',
+  params:[
+    {k:'F', label:'Alimentación F', min:0.01, max:0.09, step:0.0001, v:0.0545},
+    {k:'k', label:'Retirada k', min:0.04, max:0.07, step:0.0001, v:0.062},
+    {k:'contrast', label:'Contraste', min:1, max:6, step:0.1, v:3},
+    {k:'steps', label:'Iteraciones por paso', min:1, max:30, step:1, v:8},
+    {k:'seeds', label:'Semillas', min:1, max:80, step:1, v:14, restart:true},
+  ],
+  presets:[
+    {name:'Coral', values:{F:0.0545,k:0.062}},
+    {name:'Mitosis', values:{F:0.0367,k:0.0649}},
+    {name:'Manchas', values:{F:0.03,k:0.062}},
+    {name:'Gusanos', values:{F:0.078,k:0.061}},
+    {name:'Laberinto', values:{F:0.029,k:0.057}},
+    {name:'Solitones', values:{F:0.03,k:0.06}},
+    {name:'Caos U-skate', values:{F:0.062,k:0.0609}},
+  ],
+  create(W,H,p){
+    const N=W*H;
+    let U=new Float32Array(N).fill(1), V=new Float32Array(N), U2=new Float32Array(N), V2=new Float32Array(N);
+    const idx=new Uint8Array(N);
+    for(let s=0;s<p.seeds;s++){
+      const cx=(rnd()*W)|0, cy=(rnd()*H)|0, r=2+((rnd()*5)|0);
+      for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++){
+        if(dx*dx+dy*dy>r*r) continue;
+        const j=((cy+dy+H)%H)*W+(cx+dx+W)%W; U[j]=0.5; V[j]=0.25;
+      }
+    }
+    const xm=new Int32Array(W), xp=new Int32Array(W), ym=new Int32Array(H), yp=new Int32Array(H);
+    for(let x=0;x<W;x++){ xm[x]=(x+W-1)%W; xp[x]=(x+1)%W; }
+    for(let y=0;y<H;y++){ ym[y]=(y+H-1)%H; yp[y]=(y+1)%H; }
+    function paint(){ const c=p.contrast*255; for(let i=0;i<N;i++){ const q=V[i]*c; idx[i]=q>255?255:q; } }
+    paint();
+    return {
+      idx,
+      step(){
+        const F=p.F, K=p.k, Du=1.0, Dv=0.5;
+        for(let it=0;it<p.steps;it++){
+          for(let y=0;y<H;y++){
+            const rm=ym[y]*W, r0=y*W, rp=yp[y]*W;
+            for(let x=0;x<W;x++){
+              const a=xm[x], b=xp[x], i=r0+x, u=U[i], v=V[i];
+              const lu=0.2*(U[r0+a]+U[r0+b]+U[rm+x]+U[rp+x])+0.05*(U[rm+a]+U[rm+b]+U[rp+a]+U[rp+b])-u;
+              const lv=0.2*(V[r0+a]+V[r0+b]+V[rm+x]+V[rp+x])+0.05*(V[rm+a]+V[rm+b]+V[rp+a]+V[rp+b])-v;
+              const uvv=u*v*v;
+              U2[i]=u+Du*lu-uvv+F*(1-u);
+              V2[i]=v+Dv*lv+uvv-(F+K)*v;
+            }
+          }
+          let t=U; U=U2; U2=t; t=V; V=V2; V2=t;
+        }
+        paint();
+      }
+    };
+  }
+});
+
+/* 4. Autómata cíclico */
+SIMS.push({
+  id:'cyclic', name:'Autómata cíclico', tag:'dinámico',
+  desc:'Cada celda avanza al siguiente estado si suficientes vecinos ya lo tienen. Nacen espirales y ondas que se persiguen, como piedra-papel-tijera continuo.',
+  params:[
+    {k:'n', label:'Estados', min:3, max:24, step:1, v:14, restart:true},
+    {k:'thr', label:'Umbral de vecinos', min:1, max:12, step:1, v:3},
+    {k:'radius', label:'Radio', min:1, max:2, step:1, v:1},
+    {k:'steps', label:'Pasos por frame', min:1, max:4, step:1, v:1},
+  ],
+  presets:[
+    {name:'Espirales', values:{n:14,thr:3,radius:1}},
+    {name:'Piedra-papel-tijera', values:{n:3,thr:1,radius:1}},
+    {name:'Ondas anchas', values:{n:10,thr:5,radius:2}},
+    {name:'Cristal', values:{n:6,thr:2,radius:1}},
+  ],
+  create(W,H,p){
+    const N=W*H, idx=new Uint8Array(N);
+    let cur=new Uint8Array(N), nxt=new Uint8Array(N);
+    for(let i=0;i<N;i++) cur[i]=(rnd()*p.n)|0;
+    function paint(){ const k=255/(p.n-1); for(let i=0;i<N;i++) idx[i]=Math.round(cur[i]*k); }
+    paint();
+    return {
+      idx,
+      step(){
+        const n=p.n, r=p.radius, thr=p.thr;
+        const xt=new Int32Array(W+2*r); for(let k=0;k<xt.length;k++) xt[k]=(((k-r)%W)+W)%W;
+        for(let st=0;st<p.steps;st++){
+          for(let y=0;y<H;y++){
+            for(let x=0;x<W;x++){
+              const i=y*W+x, s=cur[i], t=s+1===n?0:s+1;
+              let c=0;
+              for(let dy=-r;dy<=r;dy++){
+                const row=((y+dy+H)%H)*W;
+                for(let dx=-r;dx<=r;dx++) if(cur[row+xt[x+dx+r]]===t) c++;
+              }
+              nxt[i]=c>=thr?t:s;
+            }
+          }
+          const tmp=cur; cur=nxt; nxt=tmp;
+        }
+        paint();
+      }
+    };
+  }
+});
+
+/* 5. Pila de arena */
+SIMS.push({
+  id:'sandpile', name:'Pila de arena abeliana', tag:'dinámico',
+  desc:'Se acumulan granos y toda celda con 4 o más los reparte entre sus vecinas. Criticalidad autoorganizada con patrones fractales de simetría exacta.',
+  params:[
+    {k:'fill', label:'Tamaño de la pila', min:0.3, max:0.98, step:0.01, v:0.85, restart:true},
+    {k:'sources', label:'Fuentes', min:1, max:12, step:1, v:1, restart:true},
+    {k:'noise', label:'Fondo aleatorio', type:'check', v:false, restart:true},
+    {k:'drip', label:'Goteo por paso', min:0, max:400, step:1, v:0},
+    {k:'speed', label:'Velocidad (miles de vuelcos)', min:100, max:20000, step:100, v:3000},
+  ],
+  presets:[
+    {name:'Mandala', values:{fill:0.9,sources:1,noise:false,drip:0}},
+    {name:'Cuatro soles', values:{fill:0.85,sources:4,noise:false,drip:0}},
+    {name:'Constelación', values:{fill:0.8,sources:9,noise:false,drip:0}},
+    {name:'Sobre fondo rugoso', values:{fill:0.85,sources:2,noise:true,drip:0}},
+  ],
+  create(W,H,p){
+    const N=W*H, h=new Int32Array(N), ring=new Int32Array(N+1), idx=new Uint8Array(N);
+    let head=0, tail=0, cnt=0;
+    const push=i=>{ ring[tail++]=i; if(tail===N+1) tail=0; cnt++; };
+    const pop=()=>{ const i=ring[head++]; if(head===N+1) head=0; cnt--; return i; };
+    const add=(i,q)=>{ const o=h[i]; h[i]=o+q; if(o<4 && o+q>=4) push(i); };
+    if(p.noise) for(let i=0;i<N;i++) h[i]=(rnd()*4)|0;
+    const total=Math.round(Math.PI*Math.pow(p.fill*Math.min(W,H)/2,2)*2.1);
+    const src=[];
+    for(let k=0;k<p.sources;k++){
+      const x = k===0 ? W>>1 : Math.round(W*(0.2+0.6*rnd()));
+      const y = k===0 ? H>>1 : Math.round(H*(0.2+0.6*rnd()));
+      src.push(y*W+x);
+    }
+    for(const s of src) add(s, Math.round(total/p.sources));
+    function paint(){ for(let i=0;i<N;i++){ const v=h[i]; idx[i]=v<4?v*85:255; } }
+    paint();
+    return {
+      idx,
+      step(){
+        for(let d=0;d<p.drip;d++) add(src[d%src.length],1);
+        let budget=p.speed*1000;
+        while(cnt>0 && budget>0){
+          const i=pop(), hv=h[i];
+          if(hv<4) continue;
+          const q=hv>>2; h[i]=hv&3; budget--;
+          const x=i%W, y=(i-x)/W;
+          if(x>0) add(i-1,q);
+          if(x<W-1) add(i+1,q);
+          if(y>0) add(i-W,q);
+          if(y<H-1) add(i+W,q);
+        }
+        paint();
+      },
+      stats(){ return cnt>0 ? 'cayendo…' : 'estable'; }
+    };
+  }
+});
+
+/* 6. Juego de la vida y variantes */
+const LIFE_RULES = {
+  life:[[3],[2,3]], highlife:[[3,6],[2,3]], daynight:[[3,6,7,8],[3,4,6,7,8]],
+  maze:[[3],[1,2,3,4,5]], coag:[[3,7,8],[2,3,5,6,7,8]], diamoeba:[[3,5,6,7,8],[5,6,7,8]], replicator:[[1,3,5,7],[1,3,5,7]]
+};
+SIMS.push({
+  id:'life', name:'Vida y variantes', tag:'dinámico',
+  desc:'Autómatas celulares totalistas tipo Conway con rastro de las celdas que murieron. Cada regla B/S da un carácter distinto.',
+  params:[
+    {k:'rule', label:'Regla', type:'select', restart:true, v:'life',
+      options:[['life','Vida  B3/S23'],['highlife','HighLife  B36/S23'],['daynight','Día y noche  B3678/S34678'],['maze','Laberinto  B3/S12345'],['coag','Coagulación  B378/S235678'],['diamoeba','Diamoeba  B35678/S5678'],['replicator','Replicador  B1357/S1357']]},
+    {k:'dens', label:'Densidad inicial', min:0.05, max:0.7, step:0.01, v:0.3, restart:true},
+    {k:'decay', label:'Rastro', min:0, max:0.99, step:0.01, v:0.9},
+    {k:'noise', label:'Ruido', min:0, max:0.01, step:0.0002, v:0},
+    {k:'steps', label:'Pasos por frame', min:1, max:5, step:1, v:1},
+  ],
+  presets:[
+    {name:'Vida con estela', values:{rule:'life',dens:0.3,decay:0.93,noise:0}},
+    {name:'Laberinto', values:{rule:'maze',dens:0.15,decay:0.5,noise:0}},
+    {name:'Replicador', values:{rule:'replicator',dens:0.02,decay:0.9,noise:0}},
+    {name:'Coagulación', values:{rule:'coag',dens:0.45,decay:0.85,noise:0}},
+  ],
+  create(W,H,p){
+    const N=W*H, idx=new Uint8Array(N), tr=new Float32Array(N);
+    let cur=new Uint8Array(N), nxt=new Uint8Array(N);
+    const [B,S]=LIFE_RULES[p.rule], born=new Uint8Array(9), surv=new Uint8Array(9);
+    B.forEach(n=>born[n]=1); S.forEach(n=>surv[n]=1);
+    for(let i=0;i<N;i++){ cur[i]=rnd()<p.dens?1:0; tr[i]=cur[i]*255; idx[i]=tr[i]; }
+    const xm=new Int32Array(W), xp=new Int32Array(W);
+    for(let x=0;x<W;x++){ xm[x]=(x+W-1)%W; xp[x]=(x+1)%W; }
+    return {
+      idx,
+      step(){
+        const dec=p.decay, nz=p.noise;
+        for(let st=0;st<p.steps;st++){
+          for(let y=0;y<H;y++){
+            const rm=((y+H-1)%H)*W, r0=y*W, rp=((y+1)%H)*W;
+            for(let x=0;x<W;x++){
+              const a=xm[x], b=xp[x];
+              const c=cur[rm+a]+cur[rm+x]+cur[rm+b]+cur[r0+a]+cur[r0+b]+cur[rp+a]+cur[rp+x]+cur[rp+b];
+              let v=cur[r0+x]?surv[c]:born[c];
+              if(nz>0 && rnd()<nz) v^=1;
+              nxt[r0+x]=v;
+            }
+          }
+          const t=cur; cur=nxt; nxt=t;
+          for(let i=0;i<N;i++){ tr[i]=cur[i]?255:tr[i]*dec; }
+        }
+        for(let i=0;i<N;i++) idx[i]=tr[i];
+      }
+    };
+  }
+});
+
+/* 7. Autómata elemental 1D */
+SIMS.push({
+  id:'elementary', name:'Autómata elemental', tag:'estático',
+  desc:'Una fila de celdas evoluciona hacia abajo con una regla de Wolfram (0 a 255). La regla 30 es caos, la 90 es el triángulo de Sierpinski, la 110 es universal.',
+  params:[
+    {k:'rule', label:'Regla', min:0, max:255, step:1, v:30},
+    {k:'init', label:'Fila inicial', type:'select', v:'single', options:[['single','Una celda'],['random','Aleatoria']]},
+    {k:'dens', label:'Densidad (aleatoria)', min:0.05, max:0.95, step:0.01, v:0.5},
+    {k:'zoom', label:'Tamaño de celda', min:1, max:8, step:1, v:2},
+    {k:'depth', label:'Color por profundidad', type:'check', v:true},
+  ],
+  presets:[
+    {name:'Regla 30, caos', values:{rule:30,init:'single'}},
+    {name:'Regla 90, Sierpinski', values:{rule:90,init:'single'}},
+    {name:'Regla 110, universal', values:{rule:110,init:'random'}},
+    {name:'Regla 150', values:{rule:150,init:'single'}},
+    {name:'Regla 45', values:{rule:45,init:'random'}},
+    {name:'Regla 73', values:{rule:73,init:'random'}},
+  ],
+  render(W,H,p){
+    const z=p.zoom, cw=Math.ceil(W/z), ch=Math.ceil(H/z), rule=p.rule;
+    let row=new Uint8Array(cw), nx=new Uint8Array(cw);
+    if(p.init==='single') row[cw>>1]=1; else for(let x=0;x<cw;x++) row[x]=rnd()<p.dens?1:0;
+    const out=new Uint8Array(W*H);
+    for(let y=0;y<ch;y++){
+      const val=p.depth?60+Math.round(195*y/ch):255;
+      for(let dy=0;dy<z;dy++){
+        const py=y*z+dy; if(py>=H) break;
+        for(let x=0;x<W;x++) out[py*W+x]=row[(x/z)|0]?val:0;
+      }
+      for(let x=0;x<cw;x++) nx[x]=(rule>>(row[(x+cw-1)%cw]*4+row[x]*2+row[(x+1)%cw]))&1;
+      const t=row; row=nx; nx=t;
+    }
+    return out;
+  }
+});
+
+/* 8. Physarum */
+SIMS.push({
+  id:'physarum', name:'Moho mucilaginoso', tag:'dinámico',
+  desc:'Miles de agentes siguen y refuerzan rastros químicos. Forman redes de venas que se parecen a neuronas, raíces y sistemas de transporte.',
+  params:[
+    {k:'agents', label:'Agentes (% de celdas)', min:1, max:30, step:1, v:8, restart:true},
+    {k:'init', label:'Inicio', type:'select', restart:true, v:'circle', options:[['random','Aleatorio'],['circle','Disco hacia dentro'],['ring','Anillo']]},
+    {k:'sangle', label:'Ángulo del sensor', min:0.1, max:1.5, step:0.01, v:0.5},
+    {k:'sdist', label:'Distancia del sensor', min:2, max:40, step:1, v:12},
+    {k:'turn', label:'Giro', min:0.05, max:1, step:0.01, v:0.3},
+    {k:'move', label:'Paso', min:0.5, max:3, step:0.1, v:1},
+    {k:'decay', label:'Persistencia', min:0.5, max:0.99, step:0.01, v:0.9},
+    {k:'diff', label:'Difusión', min:0, max:1, step:0.01, v:0.5},
+    {k:'gain', label:'Brillo', min:0.05, max:1, step:0.01, v:0.3},
+  ],
+  presets:[
+    {name:'Venas', values:{sangle:0.5,sdist:12,turn:0.3,move:1,decay:0.9,diff:0.5}},
+    {name:'Raíces finas', values:{sangle:0.3,sdist:20,turn:0.15,move:1,decay:0.95,diff:0.2}},
+    {name:'Encaje denso', values:{sangle:0.9,sdist:6,turn:0.5,move:1,decay:0.88,diff:0.7}},
+    {name:'Corrientes', values:{sangle:0.2,sdist:30,turn:0.1,move:1.5,decay:0.96,diff:0.3}},
+  ],
+  create(W,H,p){
+    const N=W*H, na=Math.max(100,Math.round(N*p.agents/100));
+    const ax=new Float32Array(na), ay=new Float32Array(na), aa=new Float32Array(na);
+    let tr=new Float32Array(N), tmp=new Float32Array(N); const idx=new Uint8Array(N);
+    const R=0.42*Math.min(W,H), TAU=Math.PI*2;
+    for(let a=0;a<na;a++){
+      if(p.init==='random'){ ax[a]=rnd()*W; ay[a]=rnd()*H; aa[a]=rnd()*TAU; }
+      else {
+        const ang=rnd()*TAU, rad=p.init==='ring'?R:R*Math.sqrt(rnd());
+        ax[a]=W/2+Math.cos(ang)*rad; ay[a]=H/2+Math.sin(ang)*rad;
+        aa[a]=p.init==='ring'?rnd()*TAU:ang+Math.PI;
+      }
+    }
+    const xm=new Int32Array(W), xp=new Int32Array(W), ym=new Int32Array(H), yp=new Int32Array(H);
+    for(let x=0;x<W;x++){ xm[x]=(x+W-1)%W; xp[x]=(x+1)%W; }
+    for(let y=0;y<H;y++){ ym[y]=(y+H-1)%H; yp[y]=(y+1)%H; }
+    function sample(px,py){
+      if(px<0) px+=W; else if(px>=W) px-=W;
+      if(py<0) py+=H; else if(py>=H) py-=H;
+      return tr[(py|0)*W+(px|0)];
+    }
+    function paint(){ const g=p.gain; for(let i=0;i<N;i++) idx[i]=255*(1-Math.exp(-tr[i]*g)); }
+    return {
+      idx,
+      step(){
+        const sa=p.sangle, sd=p.sdist, turn=p.turn, mv=p.move, cs=Math.cos(sa), sn=Math.sin(sa);
+        for(let a=0;a<na;a++){
+          const x=ax[a], y=ay[a]; let th=aa[a];
+          const c=Math.cos(th), s=Math.sin(th);
+          const tc=sample(x+c*sd,y+s*sd);
+          const tl=sample(x+(c*cs-s*sn)*sd, y+(s*cs+c*sn)*sd);
+          const trr=sample(x+(c*cs+s*sn)*sd, y+(s*cs-c*sn)*sd);
+          if(tc>tl && tc>trr){}
+          else if(tc<tl && tc<trr) th+=(rnd()<0.5?1:-1)*turn;
+          else if(trr>tl) th-=turn;
+          else if(tl>trr) th+=turn;
+          let nx=x+Math.cos(th)*mv, ny=y+Math.sin(th)*mv;
+          if(nx<0) nx+=W; else if(nx>=W) nx-=W;
+          if(ny<0) ny+=H; else if(ny>=H) ny-=H;
+          ax[a]=nx; ay[a]=ny; aa[a]=th;
+          tr[(ny|0)*W+(nx|0)]+=1;
+        }
+        const d=p.diff, dec=p.decay;
+        for(let y=0;y<H;y++){
+          const rm=ym[y]*W, r0=y*W, rp=yp[y]*W;
+          for(let x=0;x<W;x++){
+            const a=xm[x], b=xp[x], t=tr[r0+x];
+            const bl=(tr[rm+a]+tr[rm+x]+tr[rm+b]+tr[r0+a]+t+tr[r0+b]+tr[rp+a]+tr[rp+x]+tr[rp+b])/9;
+            tmp[r0+x]=(t*(1-d)+bl*d)*dec;
+          }
+        }
+        const t=tr; tr=tmp; tmp=t;
+        paint();
+      }
+    };
+  }
+});
+
+/* 9. Fractales de tiempo de escape */
+const FRACTAL = {
+  view:{cx:-0.5, cy:0, span:3.2, ar:1},
+  defaults:{mandelbrot:{cx:-0.5,cy:0,span:3.2}, julia:{cx:0,cy:0,span:3.2}, ship:{cx:-0.45,cy:-0.5,span:3.6}, tricorn:{cx:0,cy:0,span:3.4}}
+};
+SIMS.push({
+  id:'fractal', name:'Fractales', tag:'estático',
+  desc:'Conjuntos de Mandelbrot, Julia, Barco ardiente y Tricornio con color suave. Arrastra para mover y usa la rueda para acercar. El mosaico deja de ser periódico aquí.',
+  nav:true,
+  params:[
+    {k:'mode', label:'Conjunto', type:'select', v:'mandelbrot', options:[['mandelbrot','Mandelbrot'],['julia','Julia'],['ship','Barco ardiente'],['tricorn','Tricornio']]},
+    {k:'iter', label:'Iteraciones', min:30, max:2000, step:10, v:250},
+    {k:'cycles', label:'Ciclos de color', min:0.1, max:8, step:0.1, v:1.5},
+    {k:'cr', label:'Julia: c real', min:-1.6, max:1.6, step:0.0005, v:-0.8},
+    {k:'ci', label:'Julia: c imaginario', min:-1.6, max:1.6, step:0.0005, v:0.156},
+  ],
+  presets:[
+    {name:'Mandelbrot completo', values:{mode:'mandelbrot',iter:250}, view:{cx:-0.5,cy:0,span:3.2}},
+    {name:'Valle de los caballitos', values:{mode:'mandelbrot',iter:500}, view:{cx:-0.745,cy:0.113,span:0.06}},
+    {name:'Espiral profunda', values:{mode:'mandelbrot',iter:900,cycles:2}, view:{cx:-0.7435669,cy:0.1314023,span:0.004}},
+    {name:'Julia galaxia', values:{mode:'julia',cr:-0.8,ci:0.156,iter:300}},
+    {name:'Julia dendrita', values:{mode:'julia',cr:0,ci:1,iter:300}},
+    {name:'Julia conejo', values:{mode:'julia',cr:-0.123,ci:0.745,iter:300}},
+    {name:'Julia relámpago', values:{mode:'julia',cr:-0.70176,ci:-0.3842,iter:300}},
+    {name:'Barco ardiente', values:{mode:'ship',iter:300}},
+  ],
+  actions:[{label:'Reiniciar vista', run(p){ Object.assign(FRACTAL.view, FRACTAL.defaults[p.mode]); }}],
+  onParam(k,p){ if(k==='mode') Object.assign(FRACTAL.view, FRACTAL.defaults[p.mode]); },
+  resetView(p){ Object.assign(FRACTAL.view, FRACTAL.defaults[p.mode]); },
+  pan(dfx,dfy){ const v=FRACTAL.view; v.cx-=dfx*v.span; v.cy+=dfy*v.span*v.ar; },
+  zoom(fx,fy,f){
+    const v=FRACTAL.view, ys=v.span*v.ar, ns=v.span/f;
+    const wx=v.cx+(fx-0.5)*v.span, wy=v.cy-(fy-0.5)*ys;
+    v.span=ns; v.cx=wx-(fx-0.5)*ns; v.cy=wy+(fy-0.5)*ns*v.ar;
+  },
+  render(W,H,p){
+    const v=FRACTAL.view; v.ar=H/W;
+    const out=new Uint8Array(W*H), maxI=p.iter, cyc=p.cycles/24, mode=p.mode, span=v.span, ys=span*H/W;
+    const julia=mode==='julia', ship=mode==='ship', tri=mode==='tricorn', bail=65536;
+    for(let py=0;py<H;py++){
+      const y0=v.cy-((py+0.5)/H-0.5)*ys;
+      for(let px=0;px<W;px++){
+        const x0=v.cx+((px+0.5)/W-0.5)*span;
+        let zr,zi,cr,ci;
+        if(julia){ zr=x0; zi=y0; cr=p.cr; ci=p.ci; } else { cr=x0; ci=y0; zr=0; zi=0; }
+        if(mode==='mandelbrot'){
+          const q=(cr-0.25)*(cr-0.25)+ci*ci;
+          if(q*(q+cr-0.25)<=0.25*ci*ci || (cr+1)*(cr+1)+ci*ci<0.0625){ out[py*W+px]=0; continue; }
+        }
+        let n=0, m2=0;
+        for(;n<maxI;n++){
+          let t;
+          if(ship){ const a=Math.abs(zr), b=Math.abs(zi); t=a*a-b*b+cr; zi=2*a*b+ci; }
+          else if(tri){ t=zr*zr-zi*zi+cr; zi=-2*zr*zi+ci; }
+          else { t=zr*zr-zi*zi+cr; zi=2*zr*zi+ci; }
+          zr=t; m2=zr*zr+zi*zi;
+          if(m2>bail) break;
+        }
+        if(n>=maxI){ out[py*W+px]=0; continue; }
+        const mu=n+1-Math.log(Math.log(Math.sqrt(m2)))/Math.LN2;
+        let f=mu*cyc; f-=Math.floor(f);
+        const pp=f<0.5?f*2:2-2*f;
+        out[py*W+px]=1+Math.round(pp*254);
+      }
+    }
+    return out;
+  }
+});
+
+/* 10. Atractores extraños */
+let AX=0, AY=0;
+function attStep(t,A,B,C,D,x,y){
+  if(t==='clifford'){ AX=Math.sin(A*y)+C*Math.cos(A*x); AY=Math.sin(B*x)+D*Math.cos(B*y); }
+  else if(t==='dejong'){ AX=Math.sin(A*y)-Math.cos(B*x); AY=Math.sin(C*x)-Math.cos(D*y); }
+  else { AX=D*Math.sin(A*x)-Math.sin(B*y); AY=C*Math.cos(A*x)+Math.cos(B*y); }
+}
+function attBounds(p,n){
+  let x=0.1,y=0.1,x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(let i=0;i<n+100;i++){
+    attStep(p.type,p.a,p.b,p.c,p.d,x,y); x=AX; y=AY;
+    if(i<100) continue;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  return [x0,x1,y0,y1];
+}
+function attCoverage(p){
+  const [x0,x1,y0,y1]=attBounds(p,40000), xr=x1-x0, yr=y1-y0;
+  if(!(xr>0.05) || !(yr>0.05)) return 0;
+  const seen=new Uint8Array(4096); let x=0.1,y=0.1,c=0;
+  for(let i=0;i<40100;i++){
+    attStep(p.type,p.a,p.b,p.c,p.d,x,y); x=AX; y=AY;
+    if(i<100) continue;
+    const gx=Math.min(63,((x-x0)/xr*64)|0), gy=Math.min(63,((y-y0)/yr*64)|0);
+    if(!seen[gy*64+gx]){ seen[gy*64+gx]=1; c++; }
+  }
+  return c;
+}
+SIMS.push({
+  id:'attractor', name:'Atractores extraños', tag:'estático',
+  desc:'Un solo punto iterado millones de veces bajo un mapa caótico dibuja una nube de densidad. Cambia a, b, c y d un poco y la figura cambia por completo.',
+  params:[
+    {k:'type', label:'Mapa', type:'select', v:'clifford', options:[['clifford','Clifford'],['dejong','De Jong'],['svensson','Svensson']]},
+    {k:'a', label:'a', min:-3, max:3, step:0.001, v:-1.4},
+    {k:'b', label:'b', min:-3, max:3, step:0.001, v:1.6},
+    {k:'c', label:'c', min:-3, max:3, step:0.001, v:1.0},
+    {k:'d', label:'d', min:-3, max:3, step:0.001, v:0.7},
+    {k:'density', label:'Densidad (iteraciones por píxel)', min:1, max:40, step:1, v:12},
+    {k:'gamma', label:'Gamma', min:0.3, max:2, step:0.01, v:0.85},
+    {k:'zoom', label:'Zoom', min:0.6, max:3, step:0.01, v:1},
+  ],
+  presets:[
+    {name:'Clifford clásico', values:{type:'clifford',a:-1.4,b:1.6,c:1.0,d:0.7}},
+    {name:'Clifford cinta', values:{type:'clifford',a:-1.7,b:1.3,c:-0.1,d:-1.21}},
+    {name:'De Jong nube', values:{type:'dejong',a:1.641,b:1.902,c:0.316,d:1.525}},
+    {name:'De Jong alas', values:{type:'dejong',a:-2.24,b:-2.43,c:-2.13,d:-2.23}},
+    {name:'Svensson coral', values:{type:'svensson',a:1.5,b:-1.8,c:1.6,d:0.9}},
+  ],
+  actions:[{label:'Aleatorizar parámetros', run(p){
+    for(let n=0;n<60;n++){
+      const q={type:p.type,a:(Math.random()*4-2),b:(Math.random()*4-2),c:(Math.random()*4-2),d:(Math.random()*4-2)};
+      if(attCoverage(q)>450){ Object.assign(p,{a:+q.a.toFixed(3),b:+q.b.toFixed(3),c:+q.c.toFixed(3),d:+q.d.toFixed(3)}); return; }
+    }
+  }}],
+  render(W,H,p){
+    const [x0,x1,y0,y1]=attBounds(p,200000);
+    const xr=Math.max(x1-x0,1e-6), yr=Math.max(y1-y0,1e-6);
+    const sc=Math.min(W/(xr*1.06),H/(yr*1.06))*p.zoom, mx=(x0+x1)/2, my=(y0+y1)/2;
+    const hist=new Uint32Array(W*H), N=Math.round(p.density*W*H), t=p.type, A=p.a,B=p.b,C=p.c,D=p.d;
+    let x=0.1,y=0.1, mxc=0;
+    for(let i=0;i<N+100;i++){
+      attStep(t,A,B,C,D,x,y); x=AX; y=AY;
+      if(i<100) continue;
+      const px=((x-mx)*sc+W/2)|0, py=((y-my)*sc+H/2)|0;
+      if(px>=0&&px<W&&py>=0&&py<H){ const k=py*W+px, c=++hist[k]; if(c>mxc) mxc=c; }
+    }
+    const out=new Uint8Array(W*H), norm=1/Math.log1p(Math.max(1,mxc));
+    for(let i=0;i<W*H;i++){ const c=hist[i]; out[i]=c?1+Math.round(Math.pow(Math.log1p(c)*norm,p.gamma)*254):0; }
+    return out;
+  }
+});
+
+/* 11. Diagrama de bifurcación */
+SIMS.push({
+  id:'bifurcation', name:'Bifurcación logística', tag:'estático',
+  desc:'La ruta hacia el caos del mapa x → r·x·(1−x). Cada columna muestra los valores a los que se acerca el sistema para un valor de r.',
+  params:[
+    {k:'rmin', label:'r mínimo', min:2.4, max:3.9, step:0.001, v:2.9},
+    {k:'rmax', label:'r máximo', min:2.5, max:4, step:0.001, v:4},
+    {k:'axis', label:'Orientación', type:'select', v:'h', options:[['h','r en horizontal'],['v','r en vertical']]},
+    {k:'density', label:'Densidad', min:0.5, max:12, step:0.1, v:3},
+    {k:'gamma', label:'Gamma', min:0.3, max:2, step:0.01, v:0.8},
+  ],
+  presets:[
+    {name:'Ruta completa', values:{rmin:2.9,rmax:4,axis:'h'}},
+    {name:'Ventana del período 3', values:{rmin:3.74,rmax:3.86,axis:'h',density:6}},
+    {name:'Cascada vertical', values:{rmin:3.4,rmax:4,axis:'v'}},
+  ],
+  render(W,H,p){
+    const vert=p.axis==='v', RN=vert?H:W, XN=vert?W:H;
+    const hist=new Uint32Array(W*H), M=Math.round(p.density*XN); let mxc=0;
+    for(let i=0;i<RN;i++){
+      const r=p.rmin+(p.rmax-p.rmin)*(i/(RN-1));
+      let x=0.2+0.6*rnd();
+      for(let k=0;k<400;k++) x=r*x*(1-x);
+      for(let k=0;k<M;k++){
+        x=r*x*(1-x);
+        const xi=Math.max(0,Math.min(XN-1,((1-x)*(XN-1))|0));
+        const px=vert?xi:i, py=vert?(RN-1-i):xi, j=py*W+px, c=++hist[j];
+        if(c>mxc) mxc=c;
+      }
+    }
+    const out=new Uint8Array(W*H), norm=1/Math.log1p(Math.max(1,mxc));
+    for(let i=0;i<W*H;i++){ const c=hist[i]; out[i]=c?1+Math.round(Math.pow(Math.log1p(c)*norm,p.gamma)*254):0; }
+    return out;
+  }
+});
+
+/* Utilidades de trazo para simulaciones de trayectorias */
+let HMAX=0;
+function hline(hist,W,H,x0,y0,x1,y1){
+  const dx=x1-x0, dy=y1-y0, n=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))));
+  for(let k=1;k<=n;k++){
+    const px=(x0+dx*k/n)|0, py=(y0+dy*k/n)|0;
+    if(px>=0&&px<W&&py>=0&&py<H){ const c=++hist[py*W+px]; if(c>HMAX) HMAX=c; }
+  }
+}
+function toneMap(hist,W,H,gamma){
+  const out=new Uint8Array(W*H), norm=1/Math.log1p(Math.max(1,HMAX));
+  for(let i=0;i<W*H;i++){ const c=hist[i]; out[i]=c?1+Math.round(Math.pow(Math.log1p(c)*norm,gamma)*254):0; }
+  return out;
+}
+
+/* 12. Flujos caóticos 3D: Lorenz, Rössler, Thomas */
+let FX=0,FY=0,FZ=0;
+function flow3(t,A,B,C,x,y,z){
+  if(t==='lorenz'){ FX=A*(y-x); FY=x*(B-z)-y; FZ=x*y-C*z; }
+  else if(t==='rossler'){ FX=-y-z; FY=x+A*y; FZ=B+z*(x-C); }
+  else if(t==='aizawa'){ const b=0.7,e=0.25,f=0.1; FX=(z-b)*x-B*y; FY=B*x+(z-b)*y; FZ=C+A*z-z*z*z/3-(x*x+y*y)*(1+e*z)+f*z*x*x*x; }
+  else { FX=Math.sin(y)-A*x; FY=Math.sin(z)-A*y; FZ=Math.sin(x)-A*z; }
+}
+const FLOW_DT={lorenz:0.004, rossler:0.02, thomas:0.08, aizawa:0.01};
+let PX=0,PY=0,PZ=0;
+function rk3(t,A,B,C,x,y,z,dt){
+  flow3(t,A,B,C,x,y,z); const a1=FX,a2=FY,a3=FZ, h=dt/2;
+  flow3(t,A,B,C,x+h*a1,y+h*a2,z+h*a3); const b1=FX,b2=FY,b3=FZ;
+  flow3(t,A,B,C,x+h*b1,y+h*b2,z+h*b3); const c1=FX,c2=FY,c3=FZ;
+  flow3(t,A,B,C,x+dt*c1,y+dt*c2,z+dt*c3);
+  PX=x+dt/6*(a1+2*b1+2*c1+FX); PY=y+dt/6*(a2+2*b2+2*c2+FY); PZ=z+dt/6*(a3+2*b3+2*c3+FZ);
+}
+function rotMatrix(rx,ry,rz){
+  const d=Math.PI/180, cx=Math.cos(rx*d), sx=Math.sin(rx*d), cy=Math.cos(ry*d), sy=Math.sin(ry*d), cz=Math.cos(rz*d), sz=Math.sin(rz*d);
+  /* R = Rz * Ry * Rx */
+  return [
+    cz*cy, cz*sy*sx-sz*cx, cz*sy*cx+sz*sx,
+    sz*cy, sz*sy*sx+cz*cx, sz*sy*cx-cz*sx
+  ];
+}
+SIMS.push({
+  id:'flow3d', name:'Lorenz, Rössler, Thomas, Aizawa', tag:'estático',
+  desc:'Trayectorias de flujos caóticos en 3D proyectadas sobre el plano y acumuladas como densidad. Rota el ángulo de vista para cambiar por completo la figura.',
+  params:[
+    {k:'type', label:'Sistema', type:'select', v:'lorenz', options:[['lorenz','Lorenz'],['rossler','Rössler'],['thomas','Thomas'],['aizawa','Aizawa (A=a, B=d, C=c)']]},
+    {k:'A', label:'A  (σ · a · b)', min:0, max:30, step:0.001, v:10},
+    {k:'B', label:'B  (ρ · b)', min:0, max:120, step:0.01, v:28},
+    {k:'C', label:'C  (β · c)', min:0, max:20, step:0.001, v:2.667},
+    {k:'rx', label:'Rotación X', min:-180, max:180, step:1, v:-90},
+    {k:'ry', label:'Rotación Y', min:-180, max:180, step:1, v:0},
+    {k:'rz', label:'Rotación Z', min:-180, max:180, step:1, v:0},
+    {k:'density', label:'Densidad', min:2, max:60, step:1, v:20},
+    {k:'gamma', label:'Gamma', min:0.3, max:2, step:0.01, v:0.8},
+    {k:'zoom', label:'Zoom', min:0.6, max:3, step:0.01, v:1},
+  ],
+  presets:[
+    {name:'Lorenz mariposa', values:{type:'lorenz',A:10,B:28,C:2.667,rx:-90,ry:0,rz:0}},
+    {name:'Lorenz en perspectiva', values:{type:'lorenz',A:10,B:28,C:2.667,rx:-60,ry:35,rz:20}},
+    {name:'Lorenz ρ=100', values:{type:'lorenz',A:10,B:99.96,C:2.667,rx:-90,ry:0,rz:0}},
+    {name:'Lorenz vista cenital', values:{type:'lorenz',A:10,B:28,C:2.667,rx:0,ry:0,rz:0}},
+    {name:'Rössler clásico', values:{type:'rossler',A:0.2,B:0.2,C:5.7,rx:0,ry:0,rz:0}},
+    {name:'Rössler inclinado', values:{type:'rossler',A:0.2,B:0.2,C:5.7,rx:-65,ry:0,rz:25}},
+    {name:'Aizawa manzana', values:{type:'aizawa',A:0.95,B:3.5,C:0.6,rx:-75,ry:0,rz:0}},
+    {name:'Aizawa cenital', values:{type:'aizawa',A:0.95,B:3.5,C:0.6,rx:0,ry:0,rz:0}},
+    {name:'Thomas cíclico', values:{type:'thomas',A:0.208,B:0,C:0,rx:0,ry:0,rz:0}},
+    {name:'Thomas en tres dimensiones', values:{type:'thomas',A:0.19,B:0,C:0,rx:40,ry:30,rz:0}},
+  ],
+  render(W,H,p){
+    const t=p.type, A=p.A, B=p.B, C=p.C, dt=FLOW_DT[t], R=rotMatrix(p.rx,p.ry,p.rz);
+    const starts=[[1,1,1],[1.1,1,1],[-1,-1,1],[0.5,-2,2],[-2,0.5,3],[3,2,1]];
+    const traj=(steps,fn)=>{
+      for(const s of starts){
+        let x=s[0]*0.1,y=s[1]*0.1,z=s[2]*0.1+(t==='lorenz'?1:0);
+        for(let i=0;i<1500;i++){ rk3(t,A,B,C,x,y,z,dt); x=PX;y=PY;z=PZ; }
+        for(let i=0;i<steps;i++){ rk3(t,A,B,C,x,y,z,dt); x=PX;y=PY;z=PZ; fn(R[0]*x+R[1]*y+R[2]*z, R[3]*x+R[4]*y+R[5]*z); }
+      }
+    };
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+    traj(30000,(u,v)=>{ if(u<x0)x0=u; if(u>x1)x1=u; if(v<y0)y0=v; if(v>y1)y1=v; });
+    const xr=Math.max(x1-x0,1e-6), yr=Math.max(y1-y0,1e-6);
+    const sc=Math.min(W/(xr*1.06),H/(yr*1.06))*p.zoom, mx=(x0+x1)/2, my=(y0+y1)/2;
+    const hist=new Uint32Array(W*H); HMAX=0;
+    const steps=Math.round(p.density*(W+H)*100/starts.length);
+    let lx=0,ly=0,first=true,cnt=0;
+    traj(steps,(u,v)=>{
+      const px=(u-mx)*sc+W/2, py=H/2-(v-my)*sc;
+      if(cnt++%steps===0) first=true;
+      if(!first) hline(hist,W,H,lx,ly,px,py);
+      first=false; lx=px; ly=py;
+    });
+    return toneMap(hist,W,H,p.gamma);
+  }
+});
+
+/* 13. Péndulo doble: trayectorias */
+const G=9.81; let PA1=0,PA2=0;
+function pacc(t1,t2,w1,w2,fr){
+  const d=t1-t2, s=Math.sin(d), c=Math.cos(d), den=3-Math.cos(2*d);
+  PA1=(-3*G*Math.sin(t1)-G*Math.sin(t1-2*t2)-2*s*(w2*w2+w1*w1*c))/den-fr*w1;
+  PA2=(2*s*(2*w1*w1+2*G*Math.cos(t1)+w2*w2*c))/den-fr*w2;
+}
+function prk4(st,dt,fr){
+  const t1=st[0],t2=st[1],w1=st[2],w2=st[3], h=dt/2;
+  pacc(t1,t2,w1,w2,fr); const a1=PA1,a2=PA2;
+  const bw1=w1+h*a1, bw2=w2+h*a2;
+  pacc(t1+h*w1,t2+h*w2,bw1,bw2,fr); const b1=PA1,b2=PA2;
+  const cw1=w1+h*b1, cw2=w2+h*b2;
+  pacc(t1+h*bw1,t2+h*bw2,cw1,cw2,fr); const c1=PA1,c2=PA2;
+  const dw1=w1+dt*c1, dw2=w2+dt*c2;
+  pacc(t1+dt*cw1,t2+dt*cw2,dw1,dw2,fr); const d1=PA1,d2=PA2;
+  st[0]=t1+dt/6*(w1+2*bw1+2*cw1+dw1); st[1]=t2+dt/6*(w2+2*bw2+2*cw2+dw2);
+  st[2]=w1+dt/6*(a1+2*b1+2*c1+d1);    st[3]=w2+dt/6*(a2+2*b2+2*c2+d2);
+}
+SIMS.push({
+  id:'pendulum', name:'Péndulo doble: trayectorias', tag:'estático',
+  desc:'Cientos de péndulos dobles que empiezan casi en el mismo punto. Al principio se mueven juntos y después se separan: es la sensibilidad a las condiciones iniciales dibujada.',
+  params:[
+    {k:'th1', label:'Ángulo inicial 1 (°)', min:0, max:180, step:1, v:120},
+    {k:'th2', label:'Ángulo inicial 2 (°)', min:-180, max:180, step:1, v:100},
+    {k:'spread', label:'Dispersión inicial (rad)', min:0.0005, max:0.3, step:0.0005, v:0.02},
+    {k:'n', label:'Péndulos', min:20, max:1500, step:10, v:300},
+    {k:'dur', label:'Duración (s)', min:5, max:120, step:1, v:40},
+    {k:'fr', label:'Fricción', min:0, max:0.1, step:0.001, v:0},
+    {k:'gamma', label:'Gamma', min:0.3, max:2, step:0.01, v:0.75},
+    {k:'zoom', label:'Zoom', min:0.6, max:2.5, step:0.01, v:1},
+  ],
+  presets:[
+    {name:'Abanico caótico', values:{th1:120,th2:100,spread:0.02,n:300,dur:40,fr:0}},
+    {name:'Nube fina', values:{th1:150,th2:-30,spread:0.003,n:900,dur:30,fr:0}},
+    {name:'Espiral que se apaga', values:{th1:135,th2:90,spread:0.15,n:200,dur:90,fr:0.02}},
+    {name:'Casi ordenado', values:{th1:40,th2:30,spread:0.05,n:200,dur:60,fr:0}},
+  ],
+  render(W,H,p){
+    const hist=new Uint32Array(W*H); HMAX=0;
+    const dt=0.004, steps=Math.round(p.dur/dt), sc=Math.min(W,H)/4.3*p.zoom, d=Math.PI/180;
+    const st=new Float64Array(4);
+    for(let i=0;i<p.n;i++){
+      st[0]=p.th1*d+(i/(p.n-1)-0.5)*p.spread; st[1]=p.th2*d; st[2]=0; st[3]=0;
+      let lx=0,ly=0;
+      for(let s=0;s<steps;s++){
+        prk4(st,dt,p.fr);
+        const x=Math.sin(st[0])+Math.sin(st[1]), y=-(Math.cos(st[0])+Math.cos(st[1]));
+        const px=W/2+x*sc, py=H/2-y*sc;
+        if(s>0) hline(hist,W,H,lx,ly,px,py);
+        lx=px; ly=py;
+      }
+    }
+    return toneMap(hist,W,H,p.gamma);
+  }
+});
+
+/* 15. Redes complejas */
+SIMS.push({
+  id:'network', name:'Redes complejas', tag:'dinámico',
+  desc:'Grafos generados con modelos clásicos y colocados por un algoritmo de fuerzas o en círculo. Los nodos se colorean por grado, así que los hubs destacan.',
+  params:[
+    {k:'model', label:'Modelo', type:'select', restart:true, v:'ba',
+      options:[['ba','Libre de escala (Barabási-Albert)'],['ws','Mundo pequeño (Watts-Strogatz)'],['er','Aleatoria (Erdős-Rényi)'],['geo','Geométrica aleatoria']]},
+    {k:'nodes', label:'Nodos', min:30, max:1000, step:10, v:300, restart:true},
+    {k:'deg', label:'Grado medio', min:2, max:16, step:2, v:4, restart:true},
+    {k:'beta', label:'Reconexión (mundo pequeño)', min:0, max:1, step:0.01, v:0.1, restart:true},
+    {k:'layout', label:'Disposición', type:'select', v:'force', options:[['force','Fuerzas'],['circle','Círculo']]},
+    {k:'curve', label:'Curvatura de aristas', min:0, max:0.9, step:0.01, v:0.2},
+    {k:'bright', label:'Brillo de aristas', min:0.2, max:3, step:0.05, v:1},
+    {k:'nsize', label:'Tamaño de nodo', min:0, max:8, step:0.1, v:2},
+  ],
+  presets:[
+    {name:'Hubs y telaraña', values:{model:'ba',nodes:400,deg:4,layout:'force',curve:0.1,bright:1,nsize:1.5}},
+    {name:'Mandala circular', values:{model:'ws',nodes:300,deg:8,beta:0.15,layout:'circle',curve:0.7,bright:0.8,nsize:1}},
+    {name:'Hilos de un círculo', values:{model:'ba',nodes:500,deg:6,layout:'circle',curve:0.85,bright:0.7,nsize:0.6}},
+    {name:'Tejido geométrico', values:{model:'geo',nodes:600,deg:8,layout:'force',curve:0,bright:0.8,nsize:1.2}},
+    {name:'Nube aleatoria', values:{model:'er',nodes:250,deg:4,layout:'force',curve:0.3,bright:1.2,nsize:2}},
+  ],
+  create(W,H,p){
+    const n=p.nodes, N=W*H, idx=new Uint8Array(N), hist=new Uint16Array(N);
+    const eu=[], ev=[], seen=new Set();
+    const px=new Float32Array(n), py=new Float32Array(n), dx=new Float32Array(n), dy=new Float32Array(n);
+    for(let i=0;i<n;i++){ px[i]=rnd()*2-1; py[i]=rnd()*2-1; }
+    function add(a,b){
+      if(a===b) return false; const key=a<b?a*n+b:b*n+a;
+      if(seen.has(key)) return false; seen.add(key); eu.push(a); ev.push(b); return true;
+    }
+    const half=Math.max(1,p.deg>>1);
+    if(p.model==='ba'){
+      const ends=[]; const m0=Math.min(n,half+1);
+      for(let i=0;i<m0;i++) for(let j=0;j<i;j++){ add(i,j); ends.push(i,j); }
+      for(let i=m0;i<n;i++){
+        let got=0, guard=0;
+        while(got<half && guard++<50){ const t=ends[(rnd()*ends.length)|0]; if(add(i,t)){ ends.push(i,t); got++; } }
+      }
+    } else if(p.model==='ws'){
+      for(let i=0;i<n;i++) for(let k=1;k<=half;k++){
+        let j=(i+k)%n;
+        if(rnd()<p.beta){ for(let g=0;g<20;g++){ const c=(rnd()*n)|0; if(c!==i && !seen.has(i<c?i*n+c:c*n+i)){ j=c; break; } } }
+        add(i,j);
+      }
+    } else if(p.model==='er'){
+      const pr=p.deg/(n-1);
+      for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) if(rnd()<pr) add(i,j);
+    } else {
+      const r2=p.deg/(Math.PI*n)*4;
+      for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ const a=px[i]-px[j], b=py[i]-py[j]; if(a*a+b*b<r2) add(i,j); }
+    }
+    const E=eu.length, deg=new Int32Array(n); let maxDeg=1;
+    for(let e=0;e<E;e++){ deg[eu[e]]++; deg[ev[e]]++; }
+    for(let i=0;i<n;i++) if(deg[i]>maxDeg) maxDeg=deg[i];
+    let temp=0.15;
+    const k=Math.sqrt(4/n), k2=k*k;
+    function layout(){
+      if(p.layout==='circle'){
+        for(let i=0;i<n;i++){
+          const a=i/n*Math.PI*2; px[i]+=(Math.cos(a)-px[i])*0.12; py[i]+=(Math.sin(a)-py[i])*0.12;
+        }
+        temp=0.15; return;
+      }
+      dx.fill(0); dy.fill(0);
+      for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+        const a=px[i]-px[j], b=py[i]-py[j], f=k2/(a*a+b*b+1e-6);
+        dx[i]+=a*f; dy[i]+=b*f; dx[j]-=a*f; dy[j]-=b*f;
+      }
+      for(let e=0;e<E;e++){
+        const i=eu[e], j=ev[e], a=px[i]-px[j], b=py[i]-py[j], f=Math.sqrt(a*a+b*b)/k;
+        dx[i]-=a*f; dy[i]-=b*f; dx[j]+=a*f; dy[j]+=b*f;
+      }
+      for(let i=0;i<n;i++){
+        dx[i]-=px[i]*0.3*k; dy[i]-=py[i]*0.3*k;
+        const l=Math.sqrt(dx[i]*dx[i]+dy[i]*dy[i])+1e-9, m=Math.min(l,temp);
+        px[i]+=dx[i]/l*m; py[i]+=dy[i]/l*m;
+      }
+      temp=Math.max(0.004,temp*0.985);
+    }
+    function drawGraph(){
+      hist.fill(0); idx.fill(0);
+      let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+      for(let i=0;i<n;i++){ if(px[i]<x0)x0=px[i]; if(px[i]>x1)x1=px[i]; if(py[i]<y0)y0=py[i]; if(py[i]>y1)y1=py[i]; }
+      const sc=Math.min(W/Math.max(x1-x0,1e-3),H/Math.max(y1-y0,1e-3))*0.92, mx=(x0+x1)/2, my=(y0+y1)/2;
+      const sx=v=>(v-mx)*sc+W/2, sy=v=>(v-my)*sc+H/2, cv=p.curve;
+      HMAX=0;
+      for(let e=0;e<E;e++){
+        const ax=sx(px[eu[e]]), ay=sy(py[eu[e]]), bx=sx(px[ev[e]]), by=sy(py[ev[e]]);
+        const len=Math.hypot(bx-ax,by-ay), segs=cv>0?Math.max(4,Math.ceil(len/3)):1;
+        const qx=(ax+bx)/2*(1-cv)+W/2*cv, qy=(ay+by)/2*(1-cv)+H/2*cv;
+        let lx=ax, ly=ay;
+        for(let s=1;s<=segs;s++){
+          const t=s/segs, u=1-t;
+          const cx=cv>0?u*u*ax+2*u*t*qx+t*t*bx:bx, cy=cv>0?u*u*ay+2*u*t*qy+t*t*by:by;
+          hline(hist,W,H,lx,ly,cx,cy); lx=cx; ly=cy;
+        }
+      }
+      const g=p.bright*70;
+      for(let i=0;i<N;i++){ const c=hist[i]; if(c){ const v=Math.log1p(c)*g; idx[i]=1+(v>120?120:v); } }
+      const ref=Math.min(W,H)/300;
+      for(let i=0;i<n;i++){
+        const r=p.nsize*ref*(0.6+0.8*deg[i]/maxDeg);
+        if(r<0.4) continue;
+        const cx=sx(px[i]), cy=sy(py[i]), val=140+Math.round(115*deg[i]/maxDeg), r2=r*r;
+        for(let yy=Math.floor(cy-r);yy<=Math.ceil(cy+r);yy++) for(let xx=Math.floor(cx-r);xx<=Math.ceil(cx+r);xx++){
+          if(xx<0||xx>=W||yy<0||yy>=H) continue;
+          if((xx-cx)*(xx-cx)+(yy-cy)*(yy-cy)<=r2) idx[yy*W+xx]=val;
+        }
+      }
+    }
+    drawGraph();
+    return {
+      idx,
+      step(){ layout(); drawGraph(); },
+      stats(){ return n+' nodos · '+E+' aristas · grado máx. '+maxDeg; }
+    };
+  }
+});
+
+/* 16. Agregación limitada por difusión (DLA) */
+SIMS.push({
+  id:'dla', name:'Agregación por difusión (DLA)', tag:'dinámico',
+  desc:'Partículas que caminan al azar y se pegan a lo que ya está fijo. Crecen cristales ramificados, dendritas y corales sin ningún plan previo.',
+  params:[
+    {k:'mode', label:'Semilla', type:'select', restart:true, v:'center', options:[['center','Un punto central'],['points','Varios puntos'],['floor','Línea inferior']]},
+    {k:'seeds', label:'Puntos (si son varios)', min:2, max:24, step:1, v:6, restart:true},
+    {k:'stick', label:'Pegajosidad', min:0.03, max:1, step:0.01, v:1},
+    {k:'color', label:'Color según', type:'select', restart:true, v:'order', options:[['order','Orden de llegada'],['dist','Distancia']]},
+    {k:'target', label:'Partículas (escala de color)', min:1000, max:60000, step:500, v:8000, restart:true},
+    {k:'speed', label:'Velocidad (miles de pasos)', min:50, max:3000, step:50, v:600},
+  ],
+  presets:[
+    {name:'Copo dendrítico', values:{mode:'center',stick:1,color:'order'}},
+    {name:'Coral esponjoso', values:{mode:'center',stick:0.12,color:'dist'}},
+    {name:'Archipiélago', values:{mode:'points',seeds:10,stick:0.5,color:'order'}},
+    {name:'Bosque de cristal', values:{mode:'floor',stick:1,color:'dist'}},
+  ],
+  create(W,H,p){
+    const N=W*H, occ=new Uint8Array(N), idx=new Uint8Array(N), floor=p.mode==='floor';
+    const cx=W/2, cy=H/2, limit=Math.min(W,H)/2-6;
+    let R=0, count=0, wx=0, wy=0, alive=false, done=false;
+    function fix(x,y,v){ const i=y*W+x; if(!occ[i]){ occ[i]=1; idx[i]=v; } }
+    if(floor){ for(let x=0;x<W;x++) fix(x,H-1,1); R=1; }
+    else if(p.mode==='center'){ fix(Math.round(cx),Math.round(cy),1); }
+    else for(let s=0;s<p.seeds;s++){
+      const a=rnd()*Math.PI*2, d=Math.sqrt(rnd())*limit*0.6;
+      fix(Math.round(cx+Math.cos(a)*d),Math.round(cy+Math.sin(a)*d),1);
+    }
+    if(!floor){ for(let i=0;i<N;i++) if(occ[i]){ const x=i%W,y=(i-x)/W; R=Math.max(R,Math.hypot(x-cx,y-cy)); } }
+    function launch(){
+      if(floor){ wx=(rnd()*W)|0; wy=Math.max(1,H-1-Math.ceil(R)-6); }
+      else { const a=rnd()*Math.PI*2, r=Math.min(R+6,limit+2); wx=Math.round(cx+Math.cos(a)*r); wy=Math.round(cy+Math.sin(a)*r); }
+      alive=true;
+    }
+    return {
+      idx,
+      step(){
+        if(done) return;
+        let budget=p.speed*1000;
+        if(!alive) launch();
+        const killR=Math.min(R*1.5+20,Math.min(W,H)/2-2);
+        while(budget-->0){
+          const d=(rnd()*4)|0;
+          if(d===0) wx++; else if(d===1) wx--; else if(d===2) wy++; else wy--;
+          if(floor){ if(wx<0) wx+=W; else if(wx>=W) wx-=W; if(wy<1 || wy<H-1-Math.ceil(R)-40){ launch(); continue; } if(wy>=H-1){ wy=H-2; } }
+          else {
+            if(wx<1||wx>=W-1||wy<1||wy>=H-1){ launch(); continue; }
+            const dx=wx-cx, dy=wy-cy; if(dx*dx+dy*dy>killR*killR){ launch(); continue; }
+          }
+          const i=wy*W+wx;
+          if(occ[i]) { launch(); continue; }
+          const xl=floor?(wx+W-1)%W:wx-1, xr=floor?(wx+1)%W:wx+1;
+          if(occ[wy*W+xl]||occ[wy*W+xr]||occ[(wy-1)*W+wx]||(wy+1<H&&occ[(wy+1)*W+wx])){
+            if(rnd()<p.stick){
+              const dist=floor?(H-1-wy):Math.hypot(wx-cx,wy-cy);
+              occ[i]=1; count++;
+              idx[i]= p.color==='order' ? 1+Math.round(253*Math.min(1,count/p.target)) : 1+Math.round(253*Math.min(1,dist/(floor?H*0.9:Math.min(W,H)/2)));
+              if(dist>R) R=dist;
+              if(R>(floor?H-12:limit)){ done=true; return; }
+              launch();
+            }
+          }
+        }
+      },
+      stats(){ return count+' partículas · '+(done?'llegó al borde':'creciendo'); }
+    };
+  }
+});
+
+/* 17. Boids */
+SIMS.push({
+  id:'boids', name:'Boids y bandadas', tag:'dinámico',
+  desc:'Agentes que siguen tres reglas locales: separarse, alinearse y acercarse a sus vecinos. Sus estelas dibujan bandadas, remolinos y ríos.',
+  params:[
+    {k:'count', label:'Agentes', min:50, max:4000, step:50, v:1200, restart:true},
+    {k:'vision', label:'Radio de visión', min:4, max:60, step:1, v:18},
+    {k:'sep', label:'Separación', min:0, max:3, step:0.05, v:1.2},
+    {k:'ali', label:'Alineación', min:0, max:3, step:0.05, v:1},
+    {k:'coh', label:'Cohesión', min:0, max:3, step:0.05, v:0.6},
+    {k:'speed', label:'Velocidad', min:0.5, max:6, step:0.1, v:2},
+    {k:'decay', label:'Persistencia de estela', min:0.5, max:0.995, step:0.005, v:0.94},
+    {k:'gain', label:'Brillo', min:0.05, max:1.5, step:0.05, v:0.45},
+  ],
+  presets:[
+    {name:'Bandada', values:{count:1200,vision:18,sep:1.2,ali:1,coh:0.6,speed:2,decay:0.94}},
+    {name:'Ríos de luz', values:{count:2000,vision:26,sep:0.6,ali:2.4,coh:0.2,speed:2.5,decay:0.985}},
+    {name:'Remolinos', values:{count:1500,vision:22,sep:0.9,ali:0.6,coh:2.2,speed:1.6,decay:0.97}},
+    {name:'Enjambre nervioso', values:{count:800,vision:10,sep:2.4,ali:0.3,coh:0.5,speed:3,decay:0.9}},
+  ],
+  create(W,H,p){
+    const n=p.count, N=W*H, ref=Math.min(W,H)/256;
+    const x=new Float32Array(n), y=new Float32Array(n), vx=new Float32Array(n), vy=new Float32Array(n), nx=new Int32Array(n);
+    const trail=new Float32Array(N), idx=new Uint8Array(N);
+    for(let i=0;i<n;i++){ x[i]=rnd()*W; y[i]=rnd()*H; const a=rnd()*Math.PI*2; vx[i]=Math.cos(a); vy[i]=Math.sin(a); }
+    return {
+      idx,
+      step(){
+        const vis=p.vision*ref, vis2=vis*vis, cols=Math.max(3,Math.floor(W/vis)), rows=Math.max(3,Math.floor(H/vis));
+        const cw=W/cols, ch=H/rows, head=new Int32Array(cols*rows).fill(-1);
+        for(let i=0;i<n;i++){ const c=Math.min(cols-1,(x[i]/cw)|0)+Math.min(rows-1,(y[i]/ch)|0)*cols; nx[i]=head[c]; head[c]=i; }
+        const hw=W/2, hh=H/2, sepR=vis*0.45, sp=p.speed*ref;
+        const ax=new Float32Array(n), ay=new Float32Array(n);
+        for(let i=0;i<n;i++){
+          const cx=Math.min(cols-1,(x[i]/cw)|0), cy=Math.min(rows-1,(y[i]/ch)|0);
+          let cnt=0, avx=0, avy=0, mdx=0, mdy=0, sx=0, sy=0;
+          for(let oy=-1;oy<=1;oy++){
+            const rr=((cy+oy+rows)%rows)*cols;
+            for(let ox=-1;ox<=1;ox++){
+              for(let j=head[rr+(cx+ox+cols)%cols];j>=0;j=nx[j]){
+                if(j===i) continue;
+                let dx=x[j]-x[i], dy=y[j]-y[i];
+                if(dx>hw) dx-=W; else if(dx<-hw) dx+=W;
+                if(dy>hh) dy-=H; else if(dy<-hh) dy+=H;
+                const d2=dx*dx+dy*dy;
+                if(d2>=vis2) continue;
+                cnt++; avx+=vx[j]; avy+=vy[j]; mdx+=dx; mdy+=dy;
+                if(d2<sepR*sepR && d2>1e-6){ const d=Math.sqrt(d2), push=1-d/sepR; sx-=dx/d*push; sy-=dy/d*push; }
+              }
+            }
+          }
+          let tx=0, ty=0;
+          if(cnt>0){
+            tx+=p.ali*0.08*(avx/cnt-vx[i])+p.coh*0.06*(mdx/cnt/vis);
+            ty+=p.ali*0.08*(avy/cnt-vy[i])+p.coh*0.06*(mdy/cnt/vis);
+          }
+          ax[i]=tx+p.sep*0.25*sx+(rnd()-0.5)*0.06; ay[i]=ty+p.sep*0.25*sy+(rnd()-0.5)*0.06;
+        }
+        for(let i=0;i<n;i++){
+          let a=vx[i]+ax[i], b=vy[i]+ay[i]; const l=Math.hypot(a,b)||1; a/=l; b/=l; vx[i]=a; vy[i]=b;
+          let px=x[i]+a*sp, py=y[i]+b*sp;
+          if(px<0) px+=W; else if(px>=W) px-=W;
+          if(py<0) py+=H; else if(py>=H) py-=H;
+          x[i]=px; y[i]=py; trail[(py|0)*W+(px|0)]+=1;
+        }
+        const dec=p.decay, g=p.gain;
+        for(let i=0;i<N;i++){ const t=trail[i]*dec; trail[i]=t; idx[i]=255*(1-Math.exp(-t*g)); }
+      }
+    };
+  }
+});
+
+/* 18. Lenia */
+SIMS.push({
+  id:'lenia', name:'Lenia, vida continua', tag:'dinámico',
+  desc:'Un autómata celular con estados continuos, un núcleo en forma de anillo y una función de crecimiento suave. Es lento en cuadrículas grandes. Buscar parámetros es explorar.',
+  params:[
+    {k:'R', label:'Radio del núcleo', min:5, max:16, step:1, v:10, restart:true},
+    {k:'mu', label:'Centro del crecimiento μ', min:0.05, max:0.5, step:0.001, v:0.15},
+    {k:'sigma', label:'Anchura del crecimiento σ', min:0.005, max:0.08, step:0.0005, v:0.02},
+    {k:'dt', label:'Paso de tiempo', min:0.02, max:0.4, step:0.01, v:0.1},
+    {k:'patches', label:'Manchas iniciales', min:2, max:120, step:1, v:30, restart:true},
+  ],
+  presets:[
+    {name:'Orbium (planeadores)', values:{R:13,mu:0.15,sigma:0.015,dt:0.1,patches:20}},
+    {name:'Exploración A', values:{R:10,mu:0.2,sigma:0.03,dt:0.1,patches:30}},
+    {name:'Exploración B', values:{R:8,mu:0.3,sigma:0.05,dt:0.1,patches:40}},
+    {name:'Exploración C', values:{R:12,mu:0.26,sigma:0.036,dt:0.12,patches:25}},
+  ],
+  create(W,H,p){
+    const N=W*H, R=p.R, idx=new Uint8Array(N);
+    let A=new Float32Array(N), U=new Float32Array(N);
+    const ki=[], kj=[], kw=[]; let mx=0;
+    for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){
+      const r=Math.hypot(dx,dy)/R;
+      if(r>0 && r<1){ const w=Math.exp(4-1/(r*(1-r))); ki.push(dx+R); kj.push(dy+R); kw.push(w); if(w>mx) mx=w; }
+    }
+    let sum=0; const KI=[], KJ=[], KW=[];
+    for(let k=0;k<kw.length;k++) if(kw[k]>0.003*mx){ KI.push(ki[k]); KJ.push(kj[k]); KW.push(kw[k]); sum+=kw[k]; }
+    const K=KW.length, kI=Int32Array.from(KI), kJ=Int32Array.from(KJ), kW=Float32Array.from(KW.map(w=>w/sum));
+    for(let m=0;m<p.patches;m++){
+      const cx=(rnd()*W)|0, cy=(rnd()*H)|0, rad=Math.floor(R*(1+rnd()));
+      for(let dy=-rad;dy<=rad;dy++) for(let dx=-rad;dx<=rad;dx++){
+        if(dx*dx+dy*dy>rad*rad) continue;
+        A[((cy+dy+H)%H)*W+(cx+dx+W)%W]=rnd();
+      }
+    }
+    const xt=new Int32Array(W+2*R), yt=new Int32Array(H+2*R);
+    for(let k=0;k<xt.length;k++) xt[k]=(((k-R)%W)+W)%W;
+    for(let k=0;k<yt.length;k++) yt[k]=(((k-R)%H)+H)%H;
+    const rb=new Int32Array(2*R+1);
+    function paint(){ for(let i=0;i<N;i++) idx[i]=A[i]*255; }
+    paint();
+    return {
+      idx,
+      step(){
+        const mu=p.mu, s2=2*p.sigma*p.sigma, dt=p.dt;
+        for(let y=0;y<H;y++){
+          for(let j=0;j<=2*R;j++) rb[j]=yt[y+j]*W;
+          for(let x=0;x<W;x++){
+            let u=0;
+            for(let k=0;k<K;k++) u+=A[rb[kJ[k]]+xt[x+kI[k]]]*kW[k];
+            U[y*W+x]=u;
+          }
+        }
+        for(let i=0;i<N;i++){
+          const d=U[i]-mu, g=2*Math.exp(-d*d/s2)-1;
+          let v=A[i]+dt*g; A[i]=v<0?0:v>1?1:v;
+        }
+        paint();
+      }
+    };
+  }
+});
+
+/* 19. Patrones de Turing multiescala */
+function boxBlurTorus(src,dst,tmp,W,H,r){
+  r=Math.max(1,Math.min(r,(Math.min(W,H)>>1)-1)); const d=2*r+1;
+  for(let y=0;y<H;y++){
+    const row=y*W; let s=0;
+    for(let k=-r;k<=r;k++) s+=src[row+((k%W)+W)%W];
+    for(let x=0;x<W;x++){
+      tmp[row+x]=s/d;
+      s+=src[row+(x+r+1)%W]-src[row+(((x-r)%W)+W)%W];
+    }
+  }
+  for(let x=0;x<W;x++){
+    let s=0;
+    for(let k=-r;k<=r;k++) s+=tmp[(((k%H)+H)%H)*W+x];
+    for(let y=0;y<H;y++){
+      dst[y*W+x]=s/d;
+      s+=tmp[((y+r+1)%H)*W+x]-tmp[(((y-r)%H)+H)%H*W+x];
+    }
+  }
+}
+SIMS.push({
+  id:'turing', name:'Patrones de Turing multiescala', tag:'dinámico',
+  desc:'Varias escalas de activador e inhibidor compiten en cada punto y gana la más equilibrada. Da rayas, manchas y espirales anidadas a distintos tamaños.',
+  params:[
+    {k:'scales', label:'Escalas', min:2, max:5, step:1, v:4, restart:true},
+    {k:'base', label:'Escala menor (px)', min:1, max:10, step:1, v:2, restart:true},
+    {k:'ratio', label:'Razón entre escalas', min:1.4, max:3.2, step:0.05, v:2, restart:true},
+    {k:'step', label:'Intensidad', min:0.01, max:0.15, step:0.005, v:0.05},
+    {k:'smooth', label:'Pasos por frame', min:1, max:4, step:1, v:1},
+  ],
+  presets:[
+    {name:'Laberintos anidados', values:{scales:4,base:2,ratio:2,step:0.05}},
+    {name:'Fino y suave', values:{scales:3,base:1,ratio:1.7,step:0.03}},
+    {name:'Grandes cuerpos', values:{scales:5,base:3,ratio:2.4,step:0.06}},
+    {name:'Piel de leopardo', values:{scales:2,base:4,ratio:2.6,step:0.05}},
+  ],
+  create(W,H,p){
+    const N=W*H, ns=p.scales, g=new Float32Array(N), idx=new Uint8Array(N), tmp=new Float32Array(N), a=new Float32Array(N);
+    const vars=[], ra=[], amp=[];
+    for(let i=0;i<ns;i++){
+      vars.push(new Float32Array(N));
+      const r=Math.max(1,Math.round(p.base*Math.pow(p.ratio,i))); ra.push(r); amp.push(0.4+0.6*i/Math.max(1,ns-1));
+    }
+    for(let i=0;i<N;i++) g[i]=rnd()*2-1;
+    function paint(){ for(let i=0;i<N;i++) idx[i]=(g[i]*0.5+0.5)*255; }
+    paint();
+    return {
+      idx,
+      step(){
+        for(let it=0;it<p.smooth;it++){
+          for(let s=0;s<ns;s++){
+            boxBlurTorus(g,a,tmp,W,H,ra[s]);
+            boxBlurTorus(g,vars[s],tmp,W,H,ra[s]*2);
+            const v=vars[s]; for(let i=0;i<N;i++) v[i]=a[i]-v[i];
+          }
+          for(let i=0;i<N;i++){
+            let best=0, bv=Math.abs(vars[0][i]);
+            for(let s=1;s<ns;s++){ const m=Math.abs(vars[s][i]); if(m<bv){ bv=m; best=s; } }
+            g[i]+=(vars[best][i]>0?1:-1)*p.step*amp[best];
+          }
+          let mn=1e9, mx=-1e9;
+          for(let i=0;i<N;i++){ if(g[i]<mn) mn=g[i]; if(g[i]>mx) mx=g[i]; }
+          const k=2/Math.max(1e-6,mx-mn);
+          for(let i=0;i<N;i++) g[i]=(g[i]-mn)*k-1;
+        }
+        paint();
+      }
+    };
+  }
+});
+
+/* 20. Modelo de Potts */
+SIMS.push({
+  id:'potts', name:'Modelo de Potts', tag:'dinámico',
+  desc:'Como Ising, pero con q estados posibles por sitio. A baja temperatura los dominios de cada color crecen y se comen unos a otros. A alta temperatura todo es ruido.',
+  params:[
+    {k:'q', label:'Estados q', min:2, max:12, step:1, v:5, restart:true},
+    {k:'T', label:'Temperatura', min:0.05, max:2, step:0.01, v:0.6},
+    {k:'sweeps', label:'Barridos por paso', min:1, max:10, step:1, v:1},
+  ],
+  presets:[
+    {name:'Coarsening lento', values:{q:5,T:0.45}},
+    {name:'Cerca de la transición', values:{q:3,T:0.99}},
+    {name:'Mosaico de diez', values:{q:10,T:0.3}},
+    {name:'Caliente', values:{q:6,T:1.6}},
+  ],
+  create(W,H,p){
+    const N=W*H, q=p.q, s=new Uint8Array(N), idx=new Uint8Array(N);
+    for(let i=0;i<N;i++) s[i]=(rnd()*q)|0;
+    function paint(){ const k=255/(q-1); for(let i=0;i<N;i++) idx[i]=Math.round(s[i]*k); }
+    paint();
+    return {
+      idx,
+      step(){
+        const T=p.T;
+        for(let sw=0;sw<p.sweeps;sw++){
+          for(let n=0;n<N;n++){
+            const i=(rnd()*N)|0, x=i%W, y=(i-x)/W, o=s[i];
+            const a=s[y*W+(x+1)%W], b=s[y*W+(x+W-1)%W], c=s[((y+1)%H)*W+x], d=s[((y+H-1)%H)*W+x];
+            let nw=(rnd()*(q-1))|0; if(nw>=o) nw++;
+            const eo=(a===o)+(b===o)+(c===o)+(d===o), en=(a===nw)+(b===nw)+(c===nw)+(d===nw), dE=eo-en;
+            if(dE<=0 || rnd()<Math.exp(-dE/T)) s[i]=nw;
+          }
+        }
+        paint();
+      }
+    };
+  }
+});
+
+/* 21. Percolación */
+SIMS.push({
+  id:'percolation', name:'Percolación', tag:'estático',
+  desc:'Cada sitio está ocupado con probabilidad p. Cerca del umbral crítico (≈ 0,593 en la malla cuadrada) aparecen cúmulos fractales que atraviesan todo el lienzo.',
+  params:[
+    {k:'p', label:'Probabilidad p', min:0.3, max:0.9, step:0.0005, v:0.5927},
+    {k:'nb', label:'Vecindad', type:'select', v:'4', options:[['4','4 vecinos'],['8','8 vecinos']]},
+    {k:'mode', label:'Color', type:'select', v:'giant', options:[['giant','Cúmulo gigante'],['size','Por tamaño'],['random','Aleatorio']]},
+  ],
+  presets:[
+    {name:'Punto crítico', values:{p:0.5927,nb:'4',mode:'giant'}},
+    {name:'Justo debajo', values:{p:0.56,nb:'4',mode:'size'}},
+    {name:'Archipiélagos', values:{p:0.5,nb:'4',mode:'random'}},
+    {name:'Crítico con 8 vecinos', values:{p:0.407,nb:'8',mode:'giant'}},
+  ],
+  render(W,H,p){
+    const N=W*H, u=new Float32Array(N); for(let i=0;i<N;i++) u[i]=rnd();
+    const par=new Int32Array(N).fill(-1), size=new Int32Array(N);
+    const find=i=>{ while(par[i]!==i){ par[i]=par[par[i]]; i=par[i]; } return i; };
+    const uni=(a,b)=>{ a=find(a); b=find(b); if(a!==b) par[a]=b; };
+    const eight=p.nb==='8';
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const i=y*W+x; if(u[i]>=p.p) continue; par[i]=i;
+      if(x>0&&par[i-1]>=0) uni(i,i-1);
+      if(y>0){
+        if(par[i-W]>=0) uni(i,i-W);
+        if(eight){ if(x>0&&par[i-W-1]>=0) uni(i,i-W-1); if(x<W-1&&par[i-W+1]>=0) uni(i,i-W+1); }
+      }
+    }
+    let giant=-1, gs=0;
+    for(let i=0;i<N;i++) if(par[i]>=0){ const r=find(i); size[r]++; if(size[r]>gs){ gs=size[r]; giant=r; } }
+    const out=new Uint8Array(N), ls=1/Math.max(1e-6,Math.log(Math.max(2,gs)));
+    for(let i=0;i<N;i++){
+      if(par[i]<0) continue; const r=find(i), sz=size[r];
+      if(p.mode==='random') out[i]=30+(Math.imul(r+1,2654435761)>>>24)%226;
+      else if(p.mode==='size') out[i]=30+Math.round(225*Math.log(sz)*ls);
+      else out[i]=r===giant?255:30+Math.round(120*Math.log(sz)*ls);
+    }
+    return out;
+  }
+});
+
+/* 22. Incendio forestal */
+SIMS.push({
+  id:'forest', name:'Incendio forestal', tag:'dinámico',
+  desc:'Modelo de Drossel-Schwabl: los árboles crecen, caen rayos al azar y el fuego se propaga a los vecinos. Se autoorganiza en un estado crítico con incendios de todos los tamaños.',
+  params:[
+    {k:'grow', label:'Crecimiento p', min:0.0005, max:0.05, step:0.0005, v:0.008},
+    {k:'lightning', label:'Rayos f', min:0, max:0.002, step:0.00001, v:0.00003},
+    {k:'spread', label:'Probabilidad de contagio', min:0.3, max:1, step:0.01, v:1},
+    {k:'nb', label:'Vecindad', type:'select', v:'4', options:[['4','4 vecinos'],['8','8 vecinos']]},
+    {k:'ash', label:'Persistencia de ceniza', min:0.8, max:0.999, step:0.001, v:0.97},
+    {k:'dens', label:'Densidad inicial', min:0, max:1, step:0.01, v:0.6, restart:true},
+  ],
+  presets:[
+    {name:'Bosque crítico', values:{grow:0.008,lightning:0.00003,spread:1,ash:0.97}},
+    {name:'Tormenta seca', values:{grow:0.01,lightning:0.0004,spread:0.9,ash:0.95}},
+    {name:'Fuego lento', values:{grow:0.004,lightning:0.00002,spread:0.6,ash:0.985}},
+    {name:'Chispas en malla de 8', values:{grow:0.006,lightning:0.0001,spread:0.5,nb:'8',ash:0.97}},
+  ],
+  create(W,H,p){
+    const N=W*H, idx=new Uint8Array(N), age=new Uint8Array(N), ash=new Float32Array(N);
+    let cur=new Uint8Array(N), nxt=new Uint8Array(N);
+    for(let i=0;i<N;i++){ cur[i]=rnd()<p.dens?1:0; age[i]=(rnd()*100)|0; }
+    const xm=new Int32Array(W), xp=new Int32Array(W);
+    for(let x=0;x<W;x++){ xm[x]=(x+W-1)%W; xp[x]=(x+1)%W; }
+    function paint(){
+      for(let i=0;i<N;i++){
+        const s=cur[i];
+        idx[i]= s===2?255 : s===1? 90+age[i]*0.55 : ash[i]*70;
+      }
+    }
+    paint();
+    return {
+      idx,
+      step(){
+        const g=p.grow, f=p.lightning, sp=p.spread, e8=p.nb==='8', ad=p.ash;
+        for(let y=0;y<H;y++){
+          const rm=((y+H-1)%H)*W, r0=y*W, rp=((y+1)%H)*W;
+          for(let x=0;x<W;x++){
+            const i=r0+x, a=xm[x], b=xp[x], s=cur[i];
+            if(s===2){ nxt[i]=0; ash[i]=1; }
+            else if(s===1){
+              let fire=cur[rm+x]===2||cur[rp+x]===2||cur[r0+a]===2||cur[r0+b]===2;
+              if(!fire && e8) fire=cur[rm+a]===2||cur[rm+b]===2||cur[rp+a]===2||cur[rp+b]===2;
+              if(fire && (sp>=1||rnd()<sp)) nxt[i]=2;
+              else if(rnd()<f) nxt[i]=2;
+              else { nxt[i]=1; if(age[i]<200) age[i]++; }
+            } else {
+              if(rnd()<g){ nxt[i]=1; age[i]=0; } else nxt[i]=0;
+              ash[i]*=ad;
+            }
+          }
+        }
+        const t=cur; cur=nxt; nxt=t;
+        paint();
+      },
+      stats(){ let t=0,fi=0; for(let i=0;i<N;i++){ if(cur[i]===1) t++; else if(cur[i]===2) fi++; } return 'árboles '+(100*t/N).toFixed(1)+'% · fuego '+fi; }
+    };
+  }
+});
+
+/* 23. Voronoi con relajación de Lloyd */
+SIMS.push({
+  id:'voronoi', name:'Voronoi con relajación de Lloyd', tag:'dinámico',
+  desc:'Puntos al azar generan celdas. En cada paso cada punto se mueve al centro de su celda y el mosaico se ordena poco a poco hacia panales casi hexagonales. Es periódico.',
+  params:[
+    {k:'points', label:'Puntos', min:10, max:1500, step:10, v:150, restart:true},
+    {k:'relax', label:'Relajación', min:0.02, max:1, step:0.01, v:0.3},
+    {k:'jitter', label:'Agitación', min:0, max:2, step:0.05, v:0},
+    {k:'style', label:'Estilo', type:'select', v:'area', options:[['area','Color por área'],['dist','Distancia al centro'],['edge','Bordes'],['id','Celdas sueltas']]},
+  ],
+  presets:[
+    {name:'Panal que se ordena', values:{points:200,relax:0.3,jitter:0,style:'area'}},
+    {name:'Bordes finos', values:{points:400,relax:0.4,jitter:0,style:'edge'}},
+    {name:'Cristal en movimiento', values:{points:250,relax:0.5,jitter:0.5,style:'dist'}},
+    {name:'Vitral', values:{points:80,relax:0.2,jitter:0,style:'id'}},
+  ],
+  create(W,H,p){
+    const N=W*H, n=p.points, sx=new Float32Array(n), sy=new Float32Array(n), idx=new Uint8Array(N);
+    let la=new Int32Array(N), lb=new Int32Array(N); const dd=new Float32Array(N);
+    const cnt=new Float64Array(n), mx=new Float64Array(n), my=new Float64Array(n);
+    for(let i=0;i<n;i++){ sx[i]=rnd()*W; sy[i]=rnd()*H; }
+    const hw=W/2, hh=H/2;
+    function d2(x,y,s){ let dx=Math.abs(x-sx[s]); if(dx>hw) dx=W-dx; let dy=Math.abs(y-sy[s]); if(dy>hh) dy=H-dy; return dx*dx+dy*dy; }
+    function jfa(){
+      la.fill(-1);
+      for(let s=0;s<n;s++) la[(Math.round(sy[s])%H)*W+(Math.round(sx[s])%W)]=s;
+      let k=1; while(k*2<Math.max(W,H)) k*=2;
+      for(;k>=1;k>>=1){
+        for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+          const i=y*W+x; let best=la[i], bd=best>=0?d2(x,y,best):1e18;
+          for(let oy=-1;oy<=1;oy++){
+            const ry=((y+oy*k)%H+H)%H*W;
+            for(let ox=-1;ox<=1;ox++){
+              const l=la[ry+((x+ox*k)%W+W)%W];
+              if(l>=0){ const d=d2(x,y,l); if(d<bd){ bd=d; best=l; } }
+            }
+          }
+          lb[i]=best;
+        }
+        const t=la; la=lb; lb=t;
+      }
+    }
+    function analyze(move){
+      jfa(); cnt.fill(0); mx.fill(0); my.fill(0);
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+        const i=y*W+x, s=la[i]; if(s<0) continue;
+        let dx=x-sx[s], dy=y-sy[s];
+        if(dx>hw) dx-=W; else if(dx<-hw) dx+=W;
+        if(dy>hh) dy-=H; else if(dy<-hh) dy+=H;
+        cnt[s]++; mx[s]+=dx; my[s]+=dy; dd[i]=Math.sqrt(dx*dx+dy*dy);
+      }
+      if(move){
+        const r=p.relax, j=p.jitter*Math.min(W,H)/256;
+        for(let s=0;s<n;s++){
+          if(!cnt[s]) continue;
+          sx[s]=((sx[s]+r*mx[s]/cnt[s]+(rnd()-0.5)*j)%W+W)%W; sy[s]=((sy[s]+r*my[s]/cnt[s]+(rnd()-0.5)*j)%H+H)%H;
+        }
+      }
+      const mean=N/n, r0=0.75*Math.sqrt(N/(Math.PI*n));
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+        const i=y*W+x, s=la[i]; if(s<0){ idx[i]=0; continue; }
+        if(p.style==='area'){ const v=128+(cnt[s]/mean-1)*260; idx[i]=v<0?0:v>255?255:v; }
+        else if(p.style==='dist'){ const v=dd[i]/r0; idx[i]=255*(v>1?1:v); }
+        else if(p.style==='edge'){
+          const e=la[y*W+(x+1)%W]!==s||la[((y+1)%H)*W+x]!==s;
+          const v=dd[i]/r0; idx[i]=e?255:Math.min(1,v)*50;
+        }
+        else idx[i]=20+(Math.imul(s+1,2654435761)>>>24)%236;
+      }
+    }
+    analyze(false);
+    return { idx, step(){ analyze(true); }, stats(){ return n+' celdas'; } };
+  }
+});
+
+['ising','schelling','grayscott','cyclic','life','physarum','boids','lenia','turing','potts','forest','voronoi'].forEach(id=>{ SIMS.find(s=>s.id===id).periodic=true; });
+SIMS.forEach(s=>{ s.kind = s.create ? 'dynamic' : 'static'; });
+
+/* ---------- Estado global ---------- */
+const PALETTES = {
+  'Brasa':['#0d0907','#4a1a12','#b8321e','#f2851f','#ffe9b0'],
+  'Cuántico':['#04020f','#1a1466','#1e63ff','#21d4fd','#eafffb'],
+  'Papel kraft':['#f3ecdd','#d6bf95','#a3743f','#5a3620','#1c120c'],
+  'Neón':['#0d0221','#3b0f70','#ff2a6d','#ffb800','#05ffa1'],
+  'Blanco y negro':['#000000','#404040','#808080','#c0c0c0','#ffffff'],
+  'Hielo':['#06121f','#123a5c','#3f86a8','#a5d8e6','#f5fcff'],
+  'Bosque':['#07100b','#12301f','#2f6a3a','#9db84a','#f2ecc0'],
+  'Cobre':['#120b09','#3d2016','#8a4b2b','#d18b55','#f6dfc0'],
+  'Ultravioleta':['#0a0014','#3a0ca3','#7209b7','#f72585','#4cc9f0'],
+  'Cyberpunk':['#07070f','#2b0a3d','#ff0080','#ffee00','#00fff0'],
+  'Láser verde':['#020a06','#053b2b','#00c46a','#b6ff00','#f4ffd6'],
+  'Synthwave':['#12002b','#4b0f6b','#ff3e9d','#ff9e3d','#ffe8a3'],
+  'Hielo eléctrico':['#00061a','#06327a','#0080ff','#00ffd5','#f0ffff'],
+  'Tóxico':['#0a0d00','#2b3d00','#7fff00','#ff00c8','#fff0ff'],
+  'Plasma':['#0d0887','#7e03a8','#cc4778','#f89540','#f0f921'],
+};
+const S = {
+  sim:SIMS[0], pv:{}, running:true, acc:0, speedIdx:3,
+  res:256, aspect:'1:1', seed:7,
+  colors:PALETTES['Brasa'].slice(), levels:64, invert:false, transp:false,
+  smooth:false, grain:0, grainSize:1, cam:{x:0.5,y:0.5,z:1},
+};
+const SPEEDS=[0.125,0.25,0.5,1,2,4,8];
+let p=null, inst=null, sidx=null, dirty=true, frame=0;
+let W=256, H=256, DW=1000, DH=1000;
+const dc=$('#dc'), dctx=dc.getContext('2d', {willReadFrequently:true});
+const base=document.createElement('canvas'), bctx=base.getContext('2d');
+let bimg=null, bimg32=null;
+const lut32=new Uint32Array(256);
+
+function paramsOf(sim){
+  if(!S.pv[sim.id]){ const o={}; sim.params.forEach(d=>o[d.k]=d.v); S.pv[sim.id]=o; }
+  return S.pv[sim.id];
+}
+function status(msg){ $('#status').textContent=msg||''; }
+function aspectRatio(){ const [a,b]=S.aspect.split(':').map(Number); return [a,b]; }
+function dims(long){
+  const [a,b]=aspectRatio();
+  return a>=b ? [long, Math.max(1,Math.round(long*b/a))] : [Math.max(1,Math.round(long*a/b)), long];
+}
+
+/* ---------- Paleta ---------- */
+function hex2rgb(h){ const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function buildLUT(){
+  const st=S.colors.map(hex2rgb);
+  for(let i=0;i<256;i++){
+    let t=i/255;
+    if(S.levels<64){ const q=Math.min(S.levels-1,Math.floor(t*S.levels)); t=q/(S.levels-1); }
+    if(S.invert) t=1-t;
+    const f=t*4, k=Math.min(3,f|0), u=f-k, a=st[k], b=st[k+1];
+    const r=Math.round(a[0]+(b[0]-a[0])*u), g=Math.round(a[1]+(b[1]-a[1])*u), bl=Math.round(a[2]+(b[2]-a[2])*u);
+    lut32[i]=((255<<24)|(bl<<16)|(g<<8)|r)>>>0;
+  }
+  if(S.transp) lut32[0]=0;
+  const stops=[]; for(let i=0;i<=8;i++){ const t=i/8, f=t*4, k=Math.min(3,f|0), u=f-k, a=st[k], b=st[k+1];
+    stops.push('rgb('+[0,1,2].map(c=>Math.round(a[c]+(b[c]-a[c])*u)).join(',')+') '+(t*100)+'%'); }
+  $('#ramp').style.background='linear-gradient('+(S.invert?'to left':'to right')+','+stops.join(',')+')';
+  dirty=true;
+}
+function idxToCanvas(idx,w,h,cv){
+  if(cv.width!==w) cv.width=w; if(cv.height!==h) cv.height=h;
+  const ctx=cv.getContext('2d'), img=ctx.createImageData(w,h), d32=new Uint32Array(img.data.buffer);
+  for(let i=0,n=w*h;i<n;i++) d32[i]=lut32[idx[i]];
+  ctx.putImageData(img,0,0);
+  return cv;
+}
+
+/* ---------- Grano y composición ---------- */
+let noise=null, noiseKey='';
+function applyGrain(ctx,ow,oh,amt,gs,ratio){
+  const cs=Math.max(1,Math.round(gs*ratio)), gw=Math.ceil(ow/cs), gh=Math.ceil(oh/cs), key=gw+'x'+gh;
+  if(noiseKey!==key){
+    noise=new Int8Array(gw*gh);
+    for(let i=0;i<noise.length;i++) noise[i]=(Math.random()+Math.random()+Math.random()-1.5)*84;
+    noiseKey=key;
+  }
+  const img=ctx.getImageData(0,0,ow,oh), d=img.data, k=amt/100;
+  for(let y=0;y<oh;y++){
+    const row=((y/cs)|0)*gw;
+    for(let x=0;x<ow;x++){
+      const o=(y*ow+x)*4; if(d[o+3]===0) continue;
+      const n=noise[row+((x/cs)|0)]*k;
+      d[o]+=n; d[o+1]+=n; d[o+2]+=n;
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
+/* La cámara se aplica sobre la imagen ya calculada. En simulaciones periódicas el
+   fondo se repite, así que al alejar o mover se ve un mosaico sin costuras. */
+function compose(ctx,ow,oh,src,ratio){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,ow,oh);
+  ctx.imageSmoothingEnabled=S.smooth; ctx.imageSmoothingQuality='high';
+  const cam=S.sim.nav?{x:0.5,y:0.5,z:1}:S.cam, a=cam.z*ow/src.width, d=cam.z*oh/src.height;
+  const e=ow*(0.5-cam.x*cam.z), f=oh*(0.5-cam.y*cam.z);
+  ctx.setTransform(a,0,0,d,e,f);
+  if(S.sim.periodic){
+    ctx.fillStyle=ctx.createPattern(src,'repeat');
+    ctx.fillRect(-e/a,-f/d,ow/a,oh/d);
+  } else ctx.drawImage(src,0,0);
+  ctx.setTransform(1,0,0,1,0,0);
+  if(S.grain>0) applyGrain(ctx,ow,oh,S.grain,S.grainSize,ratio);
+}
+
+/* ---------- Construcción y bucle ---------- */
+function runStatic(w,h){ rs=(S.seed*7919+13)|0; return S.sim.render(w,h,p); }
+
+function build(){
+  [W,H]=dims(S.res);
+  [DW,DH]=dims(1000);
+  if(dc.width!==DW) dc.width=DW; if(dc.height!==DH) dc.height=DH;
+  base.width=W; base.height=H; bimg=bctx.createImageData(W,H); bimg32=new Uint32Array(bimg.data.buffer);
+  p=paramsOf(S.sim); frame=0; S.acc=0;
+  rs=(S.seed*7919+13)|0;
+  const t0=performance.now();
+  if(S.sim.kind==='static' || !S.sim.create){ inst=null; sidx=runStatic(W,H); }
+  else { inst=S.sim.create(W,H,p); sidx=null; }
+  dirty=true;
+  $('#stats').textContent='';
+  if(!inst) status('Calculado en '+Math.round(performance.now()-t0)+' ms · '+W+'×'+H);
+  else status(W+'×'+H+' celdas');
+}
+let pending=null;
+function schedule(fn,ms){ clearTimeout(pending); pending=setTimeout(fn,ms); }
+function rerenderStatic(){
+  const t0=performance.now(); sidx=runStatic(W,H); dirty=true;
+  status('Calculado en '+Math.round(performance.now()-t0)+' ms · '+W+'×'+H);
+}
+
+function draw(){
+  const idx=inst?inst.idx:sidx; if(!idx) return;
+  for(let i=0,n=W*H;i<n;i++) bimg32[i]=lut32[idx[i]];
+  bctx.putImageData(bimg,0,0);
+  compose(dctx,DW,DH,base,1);
+}
+function tick(){
+  if(inst && S.running){
+    S.acc+=SPEEDS[S.speedIdx];
+    while(S.acc>=1){ inst.step(); S.acc-=1; frame++; dirty=true; }
+    if(frame%15===0 && inst.stats) $('#stats').textContent=inst.stats();
+  }
+  if(dirty){ draw(); dirty=false; }
+  requestAnimationFrame(tick);
+}
+
+/* ---------- Interfaz: simulaciones y parámetros ---------- */
+function fmt(v,d){ const s=d.step<1?Math.max(0,String(d.step).split('.')[1].length):0; return (+v).toFixed(s); }
+function renderSimList(){
+  const box=$('#simlist'); box.innerHTML='';
+  SIMS.forEach(s=>{
+    const b=document.createElement('button'); b.type='button'; b.className='sim-btn';
+    b.setAttribute('aria-pressed', s===S.sim?'true':'false');
+    b.innerHTML='<span></span><small></small>'; b.firstChild.textContent=s.name; b.lastChild.textContent=s.tag;
+    b.onclick=()=>selectSim(s);
+    box.appendChild(b);
+  });
+  $('#simdesc').textContent=S.sim.desc;
+}
+function selectSim(s){
+  S.sim=s; renderSimList(); paramsOf(s);
+  S.cam={x:0.5,y:0.5,z:1};
+  $('#playBtn').disabled=s.kind==='static'; $('#stepBtn').disabled=s.kind==='static';
+  $('#speed').disabled=s.kind==='static';
+  renderParams(); build(); camChanged();
+}
+function paramChanged(d){
+  if(S.sim.onParam) S.sim.onParam(d.k,p);
+  if(S.sim.kind==='static') schedule(rerenderStatic,60);
+  else if(d.restart) schedule(build,150);
+}
+function applyPreset(pr){
+  Object.assign(p,pr.values);
+  if(pr.view) Object.assign(FRACTAL.view,pr.view);
+  else if(S.sim.resetView) S.sim.resetView(p);
+  renderParams(); build();
+}
+function renderParams(){
+  const box=$('#params'); box.innerHTML='';
+  p=paramsOf(S.sim);
+  if(S.sim.presets){
+    const c=document.createElement('div'); c.className='ctl';
+    c.innerHTML='<label for="presetSel">Ajustes rápidos</label><select id="presetSel"></select>';
+    const sel=c.querySelector('select');
+    sel.add(new Option('Elegir…',''));
+    S.sim.presets.forEach((pr,i)=>sel.add(new Option(pr.name,i)));
+    sel.onchange=()=>{ if(sel.value!=='') applyPreset(S.sim.presets[+sel.value]); };
+    box.appendChild(c);
+  }
+  S.sim.params.forEach((d,i)=>{
+    const id='p_'+d.k, c=document.createElement('div');
+    if(d.type==='check'){
+      c.innerHTML='<label class="check"><input type="checkbox" id="'+id+'"><span></span></label>';
+      c.querySelector('span').textContent=d.label;
+      const inp=c.querySelector('input'); inp.checked=!!p[d.k];
+      inp.onchange=()=>{ p[d.k]=inp.checked; paramChanged(d); };
+    } else if(d.type==='select'){
+      c.className='ctl'; c.innerHTML='<label for="'+id+'"></label><select id="'+id+'"></select>';
+      c.querySelector('label').textContent=d.label;
+      const sel=c.querySelector('select'); d.options.forEach(o=>sel.add(new Option(o[1],o[0]))); sel.value=p[d.k];
+      sel.onchange=()=>{ p[d.k]=sel.value; paramChanged(d); };
+    } else {
+      c.className='ctl';
+      c.innerHTML='<div class="row"><label for="'+id+'"></label><output></output></div><input type="range" id="'+id+'">';
+      c.querySelector('label').textContent=d.label;
+      const inp=c.querySelector('input'), out=c.querySelector('output');
+      inp.min=d.min; inp.max=d.max; inp.step=d.step; inp.value=p[d.k]; out.textContent=fmt(p[d.k],d);
+      inp.oninput=()=>{ p[d.k]=+inp.value; out.textContent=fmt(inp.value,d); paramChanged(d); };
+    }
+    box.appendChild(c);
+  });
+  (S.sim.actions||[]).forEach(a=>{
+    const b=document.createElement('button'); b.type='button'; b.className='btn'; b.textContent=a.label;
+    b.onclick=()=>{ a.run(p); renderParams(); if(S.sim.kind==='static') rerenderStatic(); else build(); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- Interfaz: paleta y acabado ---------- */
+function initPaletteUI(){
+  const sel=$('#palette'); Object.keys(PALETTES).forEach(n=>sel.add(new Option(n,n))); sel.add(new Option('Personalizada','_custom'));
+  const sw=$('#swatches');
+  for(let i=0;i<5;i++){
+    const inp=document.createElement('input'); inp.type='color'; inp.id='col'+i; inp.setAttribute('aria-label','Color '+(i+1));
+    inp.oninput=()=>{ S.colors[i]=inp.value; sel.value='_custom'; buildLUT(); };
+    sw.appendChild(inp);
+  }
+  sel.onchange=()=>{ if(sel.value!=='_custom'){ S.colors=PALETTES[sel.value].slice(); syncSwatches(); buildLUT(); } };
+  syncSwatches(); sel.value='Brasa';
+}
+function syncSwatches(){ S.colors.forEach((c,i)=>$('#col'+i).value=c); }
+function hsl2hex(h,s,l){
+  s/=100; l/=100; const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l), f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+function randomPalette(){
+  const h=Math.random()*360, h2=(h+120+Math.random()*120)%360, dark=Math.random()<0.7;
+  const L=dark?[6,18,38,62,90]:[94,78,56,32,10];
+  S.colors=[hsl2hex(h,30,L[0]), hsl2hex(h,55,L[1]), hsl2hex((h+h2)/2%360,70,L[2]), hsl2hex(h2,80,L[3]), hsl2hex(h2,60,L[4])];
+  syncSwatches(); $('#palette').value='_custom'; buildLUT();
+}
+function bindRange(id,outId,key,fmtFn,after){
+  const el=$(id), out=$(outId);
+  const upd=()=>{ S[key]=+el.value; out.textContent=fmtFn(S[key]); };
+  el.oninput=()=>{ upd(); after&&after(); }; upd();
+}
+
+/* ---------- Exportación ---------- */
+function download(blob,name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+/* En el móvil algunos navegadores no guardan la descarga: se ofrece compartir o mantener pulsada la imagen. */
+let shotUrl=null;
+function showShot(blob,name){
+  if(shotUrl) URL.revokeObjectURL(shotUrl);
+  shotUrl=URL.createObjectURL(blob);
+  $('#shotImg').src=shotUrl;
+  const dl=$('#shotDl'); dl.href=shotUrl; dl.download=name;
+  const file=new File([blob],name,{type:'image/png'});
+  const sh=$('#shotShare'); sh.hidden=!(navigator.canShare && navigator.canShare({files:[file]}));
+  sh.onclick=()=>navigator.share({files:[file],title:'Textura'}).catch(()=>{});
+  $('#modal').hidden=false;
+}
+/* ---------- Cámara ---------- */
+function camChanged(){
+  const z=S.sim.nav?FRACTAL.defaults[p.mode].span/FRACTAL.view.span:S.cam.z;
+  $('#zoomVal').textContent=Math.round(z*100)+'%'; dirty=true;
+}
+function camZoom(fx,fy,f){
+  if(S.sim.nav){ S.sim.zoom(fx,fy,f); schedule(rerenderStatic,60); camChanged(); return; }
+  const c=S.cam, nz=Math.min(64,Math.max(0.25,c.z*f));
+  const ux=c.x+(fx-0.5)/c.z, uy=c.y+(fy-0.5)/c.z;
+  c.z=nz; c.x=ux-(fx-0.5)/nz; c.y=uy-(fy-0.5)/nz; camChanged();
+}
+function camPan(dfx,dfy){
+  if(S.sim.nav){ S.sim.pan(dfx,dfy); schedule(rerenderStatic,40); return; }
+  S.cam.x-=dfx/S.cam.z; S.cam.y-=dfy/S.cam.z; camChanged();
+}
+function camReset(){
+  S.cam={x:0.5,y:0.5,z:1};
+  if(S.sim.nav){ S.sim.resetView(p); schedule(rerenderStatic,0); }
+  camChanged();
+}
+function nextFrame(){ return new Promise(r=>requestAnimationFrame(()=>setTimeout(r,20))); }
+async function exportPNG(){
+  const btn=$('#pngBtn'); btn.disabled=true;
+  try{
+    const long=+$('#expSize').value, [ow,oh]=dims(long);
+    const heavy=S.sim.kind==='static';
+    status(heavy?'Calculando '+ow+'×'+oh+'… puede tardar unos segundos':'Preparando PNG…');
+    await nextFrame();
+    const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh;
+    const ctx=cv.getContext('2d',{willReadFrequently:true});
+    let src=base;
+    if(heavy){
+      const zf=S.sim.nav?1:Math.max(1,S.cam.z);
+      const [rw,rh]=dims(Math.min(Math.round(long*zf),6000));
+      src=idxToCanvas(runStatic(rw,rh),rw,rh,document.createElement('canvas'));
+    }
+    else { const idx=inst.idx; for(let i=0,n=W*H;i<n;i++) bimg32[i]=lut32[idx[i]]; bctx.putImageData(bimg,0,0); }
+    compose(ctx,ow,oh,src,ow/DW);
+    noiseKey='';
+    dirty=true;
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    const name='fisico-barbudo_'+S.sim.id+'_s'+S.seed+'_'+ow+'x'+oh+'.png';
+    const phone=matchMedia('(pointer:coarse)').matches;
+    if(phone) showShot(blob,name); else download(blob,name);
+    status('PNG exportado · '+ow+'×'+oh);
+  }catch(e){ status('No se pudo exportar: '+e.message); }
+  btn.disabled=false;
+}
+let rec=null, chunks=[];
+function toggleRec(){
+  const btn=$('#recBtn');
+  if(rec){ rec.stop(); return; }
+  if(!window.MediaRecorder){ status('Este navegador no puede grabar vídeo.'); return; }
+  const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t));
+  rec=new MediaRecorder(dc.captureStream(30),{mimeType:mime,videoBitsPerSecond:10e6}); chunks=[];
+  rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  rec.onstop=()=>{
+    download(new Blob(chunks,{type:'video/webm'}),'fisico-barbudo_'+S.sim.id+'_s'+S.seed+'.webm');
+    rec=null; btn.textContent='Grabar WebM'; btn.classList.remove('rec'); status('Vídeo exportado');
+  };
+  rec.start(); btn.textContent='Detener y guardar'; btn.classList.add('rec'); status('Grabando…');
+  S.running=true; $('#playBtn').textContent='Pausar';
+}
+
+/* ---------- Arranque ---------- */
+function init(){
+  initPaletteUI();
+  $('#aspect').onchange=e=>{ S.aspect=e.target.value; schedule(build,0); };
+  bindRange('#res','#resOut','res',v=>v+' px',()=>schedule(build,200));
+  bindRange('#levels','#levelsOut','levels',v=>v>=64?'continuo':String(v),buildLUT);
+  bindRange('#grain','#grainOut','grain',v=>v+'%',()=>dirty=true);
+  bindRange('#grainSize','#grainSizeOut','grainSize',v=>v+' px',()=>{ noiseKey=''; dirty=true; });
+  $('#invert').onchange=e=>{ S.invert=e.target.checked; buildLUT(); };
+  $('#transp').onchange=e=>{ S.transp=e.target.checked; buildLUT(); };
+  $('#smooth').onchange=e=>{ S.smooth=e.target.checked; dirty=true; };
+  $('#randPal').onclick=randomPalette;
+  $('#pngBtn').onclick=exportPNG;
+  $('#recBtn').onclick=toggleRec;
+  $('#playBtn').onclick=()=>{ S.running=!S.running; $('#playBtn').textContent=S.running?'Pausar':'Reanudar'; };
+  $('#stepBtn').onclick=()=>{ if(inst){ S.running=false; $('#playBtn').textContent='Reanudar'; inst.step(); frame++; dirty=true; } };
+  $('#resetBtn').onclick=()=>build();
+  $('#speed').value=S.speedIdx; $('#speed').oninput=e=>{ S.speedIdx=+e.target.value; };
+  $('#seed').oninput=e=>{ S.seed=Math.max(0,Math.floor(+e.target.value||0)); schedule(build,200); };
+  $('#diceBtn').onclick=()=>{ S.seed=Math.floor(Math.random()*999999); $('#seed').value=S.seed; build(); };
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space' && !/INPUT|SELECT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)){ e.preventDefault(); $('#playBtn').click(); }
+  });
+
+  /* Cámara: arrastrar, rueda, pellizco y botones. Los fractales recalculan; el resto mueve la imagen. */
+  const ptrs=new Map(); let pinch=0;
+  const fracOf=(e)=>{ const r=dc.getBoundingClientRect(); return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]; };
+  dc.addEventListener('pointerdown',e=>{ ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); dc.setPointerCapture(e.pointerId); pinch=0; });
+  dc.addEventListener('pointermove',e=>{
+    const q=ptrs.get(e.pointerId); if(!q) return;
+    const r=dc.getBoundingClientRect();
+    if(ptrs.size===2){
+      const o=[...ptrs.entries()].find(([id])=>id!==e.pointerId)[1];
+      const d0=Math.hypot(q.x-o.x,q.y-o.y); q.x=e.clientX; q.y=e.clientY;
+      const d1=Math.hypot(q.x-o.x,q.y-o.y);
+      if(d0>0) camZoom(((q.x+o.x)/2-r.left)/r.width,((q.y+o.y)/2-r.top)/r.height,d1/d0);
+      return;
+    }
+    camPan((e.clientX-q.x)/r.width,(e.clientY-q.y)/r.height); q.x=e.clientX; q.y=e.clientY;
+  });
+  const end=e=>{ ptrs.delete(e.pointerId); };
+  dc.addEventListener('pointerup',end); dc.addEventListener('pointercancel',end);
+  dc.addEventListener('wheel',e=>{
+    e.preventDefault(); const [fx,fy]=fracOf(e);
+    camZoom(fx,fy,e.deltaY<0?1.2:1/1.2);
+  },{passive:false});
+  dc.addEventListener('dblclick',()=>camReset());
+  $('#zoomIn').onclick=()=>camZoom(0.5,0.5,1.4);
+  $('#zoomOut').onclick=()=>camZoom(0.5,0.5,1/1.4);
+  $('#zoomReset').onclick=()=>camReset();
+  $('#modalClose').onclick=()=>{ $('#modal').hidden=true; if(shotUrl){ URL.revokeObjectURL(shotUrl); shotUrl=null; } };
+
+  $('#expHint').textContent='Los fractales, atractores, flujos, bifurcaciones y autómatas elementales se recalculan a la resolución exportada. Las simulaciones dinámicas amplían la cuadrícula actual. La exportación respeta la posición y el zoom de la cámara.';
+  buildLUT();
+  selectSim(SIMS[0]);
+  requestAnimationFrame(tick);
+}
+init();
+</script>
+</body>
+</html>
